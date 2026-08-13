@@ -157,7 +157,7 @@ chrome.storage.local
 
 ### 方法一：加载发布包
 
-1. 下载 `bilibili-digest-v1.2.2.zip`。
+1. 下载 `bilibili-digest-main.zip`。
 2. 将 ZIP 完整解压到固定文件夹。
 3. 不要在加载扩展后删除或移动该文件夹。
 

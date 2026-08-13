@@ -1,42 +1,153 @@
-# Bilibili Digest
+Bilibili Digest
 
-Turn Bilibili videos with existing captions into searchable learning resources. The Chrome side panel provides timestamped transcripts, DeepSeek summaries, chapters, key points, explanations, local notes, and timestamp seeking.
+把 B 站视频转换成带时间戳的字幕、中文章节、关键观点和学习笔记。
 
-## Features
+本项目是基于 zarazhangrui/youtube-digest 的 B 站适配二次开发版本。原项目面向 YouTube；本项目重写了视频识别、字幕来源、播放器跳转、分P/合集跟随和语音识别链路，用于 Bilibili 视频页面。
 
-- Standard `www.bilibili.com/video/BV...` pages and multi-part videos
-- Existing Bilibili subtitle tracks, with Chinese preferred
-- Transcript, Chinese, and bilingual views
-- AI overview, chapters, key points, and selected-text explanations
-- Timestamp seeking, local notes, cache, and Markdown export
-- Bring your own DeepSeek API key
-- No Supadata and no developer-operated server
+本项目与哔哩哔哩、阿里云、DeepSeek及原项目作者均无商业隶属关系，也不是B站官方扩展。
 
-Videos without a Bilibili subtitle track are not supported in this first version. Anime pages, live streams, short videos, and embeds are also outside the current scope.
+功能
 
-## Install
+在B站“转发”按钮右侧显示“AI总结”，跟随页面缩放和工具栏布局
 
-1. Download and extract the project to a permanent folder.
-2. Open `chrome://extensions` in Chrome 116 or newer.
-3. Enable Developer mode and choose **Load unpacked**.
-4. Select the folder that contains `manifest.json`.
-5. Enter your DeepSeek API key in the extension Settings page.
-6. Open a captioned Bilibili video and click **AI 总结**.
+支持普通BV视频、多P视频及合集选集切换
 
-After editing the source, reload the extension from `chrome://extensions` and refresh the Bilibili page.
+阿里云百炼Fun-ASR长音频转写，生成句级时间戳
 
-## Checks
+字幕、简体中文和双语对照模式
 
-```bash
+点击字幕或章节时间跳转播放器
+
+DeepSeek生成简体中文章节时间线、关键观点和选中文本解释
+
+普通播放器及全屏播放器记笔记，记录BV、分P和时间点
+
+Markdown、HTML导出及复制到飞书
+
+字幕、概览、翻译和笔记保存在Chrome本地
+
+同一视频识别成功后使用缓存，避免重复ASR调用
+
+工作流程
+
+填写百炼API Key后，点击“AI总结”才会开始处理，不会在打开视频时自动预加载或自动扣费。
+
+B站当前BV/分P
+→ 获取对应CID及最低码率纯音轨
+→ 下载音轨
+→ 上传阿里云百炼48小时临时空间
+→ Fun-ASR生成带时间戳字幕
+→ DeepSeek生成中文概览、章节和关键观点
+→ 结果缓存至Chrome本地
+
+如果没有配置百炼Key，扩展会尝试读取B站已有字幕。但B站自动字幕 ai-zh 可能存在内容错误，因此需要稳定结果时建议配置Fun-ASR。
+
+安装
+
+下载发布ZIP并解压到长期保留的文件夹。
+
+在Chrome地址栏打开 chrome://extensions/。
+
+开启右上角“开发者模式”。
+
+点击“加载已解压的扩展程序”。
+
+选择包含 manifest.json 的文件夹。
+
+打开扩展详情页，进入“扩展程序选项”。
+
+填写DeepSeek API Key和阿里云百炼API Key。
+
+保存设置并刷新B站视频页面。
+
+点击视频工具栏“AI总结”。
+
+升级版本时，如果 manifest.json 增加了新权限，建议删除旧版后重新加载，不要只覆盖文件。
+
+API配置
+
+DeepSeek
+
+用于生成概览、中文章节、关键观点、翻译、解释和笔记整理。
+
+打开 DeepSeek开放平台。
+
+创建API Key。
+
+将Key填入扩展设置中的“DeepSeek API 密钥”。
+
+阿里云百炼Fun-ASR
+
+用于把B站音轨转换成带时间戳字幕。只需要百炼 sk- 开头的API Key，不需要配置RAM AccessKey或自己的OSS。
+
+打开 阿里云百炼控制台。
+
+选择华北2（北京）并开通模型服务。
+
+在 API Key管理 创建Key。
+
+将Key填入扩展设置中的“百炼API Key”。
+
+建议在百炼控制台开启“免费额度用完即停”，避免超额扣费。
+
+Fun-ASR不是永久免费。免费额度、有效期和超额价格可能调整，请以阿里云模型价格为准。
+
+数据与隐私
+
+两个API Key保存在 chrome.storage.local，不会写进源码。
+
+音轨会上传至阿里云百炼临时空间用于语音识别，临时URL有效期为48小时。
+
+字幕、标题、简介等上下文会发送给DeepSeek生成AI内容。
+
+扩展没有开发者运营的中转服务器，也不接入统计分析服务。
+
+本地缓存和笔记可在设置页清除。
+
+浏览器扩展不是保存长期密钥的高安全服务端环境，请使用专用Key、限制权限并定期轮换。
+
+完整说明见 PRIVACY.md 和 SECURITY.md。
+
+已知限制
+
+当前支持Chrome 116及以上版本的标准 www.bilibili.com/video/BV... 页面。
+
+番剧、直播、短视频、互动视频和站外嵌入页尚未完整支持。
+
+首次ASR需要完成下载、上传和云端识别，长视频通常需要等待几分钟。
+
+音频CDN签名有有效期，页面打开过久后失败时可刷新页面重试。
+
+B站自动字幕可能与视频内容不匹配；Fun-ASR用于规避这类错误，但仍可能误识别专业名词或多人重叠语音。
+
+API费用由用户自己的DeepSeek和阿里云账号承担。
+
+与上游项目的关系
+
+上游项目：zarazhangrui/youtube-digest
+
+本项目保留和继承了上游项目的整体扩展形态、侧边栏交互、AI概览、时间戳笔记等思路，并完成以下主要改造：
+
+YouTube页面识别改为Bilibili BV、CID、分P和合集识别
+
+YouTube/Supadata字幕链路改为B站字幕与阿里云Fun-ASR
+
+播放器跳转、全屏笔记和页面导航改为B站DOM结构
+
+界面、图标、标题、提示语和导出内容改为B站中文主题
+
+AI模型改为用户自带DeepSeek API Key
+
+感谢原作者 Zara Zhang 开源YouTube Digest。本仓库的衍生修改不代表原作者对其功能、稳定性或第三方服务集成提供背书。
+
+本地开发
+
 npm test
 npm run check
 npm run package
-```
 
-The package is written to `dist/bilibili-digest-v1.2.2.zip`.
+打包结果位于 dist/bilibili-digest-v1.2.2.zip。
 
-## Privacy and license
+许可证
 
-Keys, notes, and cache stay in local Chrome storage. Bilibili supplies captions; DeepSeek receives transcript and relevant video context only when AI features are used. Never place API keys in source code or commits.
-
-This is an MIT-licensed remix of [zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest). The upstream copyright notice remains in `LICENSE`.
+本项目延续上游项目的 MIT License。原作者版权声明已保留在 LICENSE 中。分发或修改本项目时，请继续保留原版权声明和MIT许可文本。

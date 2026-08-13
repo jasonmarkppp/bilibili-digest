@@ -146,7 +146,7 @@ npm test
 npm run check
 npm run package
 
-打包结果位于 dist/bilibili-digest.zip。
+打包结果位于 dist/bilibili-digest-main.zip。
 
 许可证
 

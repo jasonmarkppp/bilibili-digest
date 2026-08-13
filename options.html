@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bilibili Digest 设置</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="settings-shell">
+      <header>
+        <div class="settings-heading-row">
+          <div class="eyebrow">Bilibili Digest</div>
+          <div
+            class="language-switch"
+            role="group"
+            aria-label="Interface language"
+            data-i18n-aria-label="languageGroupLabel"
+          >
+            <button
+              class="language-option"
+              type="button"
+              data-language="en"
+              aria-pressed="true"
+            >
+              English
+            </button>
+            <button
+              class="language-option"
+              type="button"
+              data-language="zh-CN"
+              aria-pressed="false"
+            >
+              中文
+            </button>
+          </div>
+        </div>
+        <h1 data-i18n="heading">Bilibili Digest 设置</h1>
+        <p class="lede" data-i18n="lede">
+          密钥保存在当前 Chrome 配置中，只在使用 AI 功能时发送给 DeepSeek。
+          本扩展没有开发者服务器或数据分析。
+        </p>
+      </header>
+
+      <form id="settingsForm">
+        <section class="card">
+          <h2>语音识别（阿里云百炼）</h2>
+          <label for="asrApiKey">百炼 API Key</label>
+          <input
+            id="asrApiKey"
+            name="asrApiKey"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="sk-..."
+          />
+          <p class="help">
+            Bilibili Digest 会下载当前B站音轨，上传到百炼48小时临时空间，并使用 Fun-ASR 生成带时间戳字幕。
+            <a
+              href="https://bailian.console.aliyun.com/?apiKey=1"
+              target="_blank"
+              rel="noreferrer"
+              >获取百炼 API Key</a>。不填写时仅尝试使用B站字幕。
+          </p>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="aiProvider">AI provider</h2>
+          <div
+            class="provider-summary"
+            aria-label="Supported AI provider"
+            data-i18n-aria-label="providerSummaryLabel"
+          >
+            <span class="provider-name">DeepSeek V4 Flash</span>
+            <span class="provider-badge" data-i18n="providerBadge"
+              >Supported in this version</span
+            >
+          </div>
+
+          <label for="aiApiKey" data-i18n="deepseekApiKeyLabel"
+            >DeepSeek API key</label
+          >
+          <input
+            id="aiApiKey"
+            name="aiApiKey"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Paste your DeepSeek key"
+          />
+          <p class="help">
+            <span data-i18n="deepseekHelp"
+              >Bilibili Digest uses DeepSeek V4 Flash for overviews,
+              explanations, translation, and note polishing.</span
+            >
+            <a
+              href="https://platform.deepseek.com/api_keys"
+              target="_blank"
+              rel="noreferrer"
+              data-i18n="deepseekLink"
+              >Create a DeepSeek API key</a
+            ><span data-i18n="deepseekHelpSuffix">.</span>
+          </p>
+          <div class="privacy-note" data-i18n="privacyNote">
+            When you use AI features, DeepSeek receives the video transcript
+            and relevant video context. Review DeepSeek's terms and pricing
+            before saving.
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <button class="primary" type="submit" data-i18n="saveSettings">
+            Save settings
+          </button>
+          <span id="saveStatus" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <details class="card customization-card">
+        <summary class="customization-summary">
+          <span class="customization-summary-copy">
+            <span class="eyebrow" data-i18n="localRemix">Local remix</span>
+            <span class="customization-title" data-i18n="customizationTitle"
+              >Want to use another AI model?</span
+            >
+            <span
+              class="customization-purpose"
+              data-i18n="customizationPurpose"
+              >Edit and copy a safe prompt for your coding agent</span
+            >
+          </span>
+          <span class="agent-badge" data-i18n="agentBadge"
+            >Coding agent ready</span
+          >
+        </summary>
+        <div class="customization-content">
+          <p class="help customization-intro" data-i18n="customizationIntro">
+            You can edit the prompt directly. Complete these three steps before
+            copying:
+          </p>
+          <ol class="customization-steps">
+            <li data-i18n="customizationStepFolder">
+              Open the extracted YouTube Digest project folder in your coding
+              agent.
+            </li>
+            <li data-i18n="customizationStepReplace">
+              Replace [PROVIDER] and [MODEL] with the service and model you want
+              to use.
+            </li>
+            <li data-i18n="customizationStepKeys">
+              Never include API keys in the prompt or chat. Enter them yourself
+              after the code is ready.
+            </li>
+          </ol>
+          <label for="customizationPrompt" data-i18n="customizationPromptLabel"
+            >Editable customization prompt</label
+          >
+          <div
+            id="customizationPromptReminder"
+            class="prompt-reminder"
+            role="note"
+            aria-label="Prompt reminder"
+            data-i18n-aria-label="customizationReminderLabel"
+          >
+            <span data-i18n="customizationReminder"
+              >Before copying, replace [PROVIDER] and [MODEL] with the provider
+              and model you want to use.</span
+            >
+          </div>
+          <textarea id="customizationPrompt" rows="12" aria-describedby="customizationPromptReminder">Customize this local YouTube Digest workspace to use [PROVIDER] with [MODEL]. Work only in the current workspace. Before editing, verify that it contains manifest.json and that the manifest name is YouTube Digest. If verification fails, stop and ask me to open the extracted YouTube Digest project folder in my coding agent. Do not search other folders, edit a guessed copy, assume an installation path, or claim Chrome can reveal the absolute OS source path. Update the provider's API endpoint, request format, and minimum Chrome host permissions. Preserve bring-your-own-key and local Chrome storage. Never put API keys in source code, commits, logs, screenshots, this prompt, or chat; after the code is ready, tell me where to enter the key myself. Keep DeepSeek-only request fields and retry behavior isolated to DeepSeek. Handle provider-specific rules separately so one provider does not affect another. Update README.md, README.zh-CN.md, PRIVACY.md, SECURITY.md, and tests. Run npm test, npm run check, and npm run package. Then explain how to reload the unpacked extension and test it on a real YouTube video.</textarea>
+          <div class="copy-actions">
+            <button
+              id="copyCustomizationPromptBtn"
+              type="button"
+              data-i18n="copyCustomizationPrompt"
+            >
+              Copy edited prompt
+            </button>
+            <span id="copyStatus" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+      </details>
+
+      <section class="card data-card">
+        <h2 data-i18n="localData">Local data</h2>
+        <p class="help" data-i18n="localDataHelp">
+          Digests, translations, and notes are stored only in this Chrome
+          profile. You can remove them at any time.
+        </p>
+        <div class="data-actions">
+          <button id="clearCacheBtn" type="button" data-i18n="clearCache">
+            Clear cached digests
+          </button>
+          <button id="clearNotesBtn" type="button" data-i18n="deleteNotes">
+            Delete all notes
+          </button>
+          <button
+            id="resetBtn"
+            class="danger"
+            type="button"
+            data-i18n="resetData"
+          >
+            Reset extension data
+          </button>
+        </div>
+        <span id="dataStatus" role="status" aria-live="polite"></span>
+      </section>
+
+      <footer data-i18n-html="footer">
+        Read <a href="PRIVACY.md" target="_blank">PRIVACY.md</a> in the
+        repository for the complete data-flow description.
+      </footer>
+    </main>
+
+    <script src="settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

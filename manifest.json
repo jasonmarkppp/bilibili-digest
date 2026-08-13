@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "Bilibili Digest",
+  "version": "1.2.2",
+  "minimum_chrome_version": "116",
+  "description": "把 B 站视频变成带字幕、AI 总结、时间戳与笔记的学习资料。",
+  "permissions": ["sidePanel", "storage", "tabs", "scripting", "declarativeNetRequestWithHostAccess"],
+  "host_permissions": [
+    "https://www.bilibili.com/*",
+    "https://api.bilibili.com/*",
+    "https://*.hdslb.com/*",
+    "https://*.bilivideo.com/*",
+    "https://*.akamaized.net/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://*.oss-cn-beijing.aliyuncs.com/*",
+    "https://api.deepseek.com/*"
+  ],
+  "action": {
+    "default_title": "打开 Bilibili Digest",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "bilibili_audio",
+        "enabled": true,
+        "path": "rules/bilibili-audio.json"
+      }
+    ]
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.bilibili.com/video/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

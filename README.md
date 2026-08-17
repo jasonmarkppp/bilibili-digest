@@ -9,7 +9,7 @@ Bilibili Digest 会直接显示在哔哩哔哩视频页面中。它可以读取�
 
 > [!IMPORTANT]
 > 本项目基于 [zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest) 二次开发，针对哔哩哔哩网页结构和国内服务重新适配，不是哔哩哔哩官方产品。
-
+b站教学视频链接：https://b23.tv/xls42lN
 ---
 
 ## ✨ 核心功能

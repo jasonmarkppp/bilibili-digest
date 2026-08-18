@@ -748,12 +748,18 @@ async function handleFetchTranscript(videoId, videoUrl = "", requestedPage = 1) 
     }
 
     const playerResponse = await fetch(
-      `https://api.bilibili.com/x/player/v2?bvid=${encodeURIComponent(videoId)}&cid=${page.cid}`,
-      { credentials: "include" },
+      `https://api.bilibili.com/x/player/wbi/v2?bvid=${encodeURIComponent(videoId)}&cid=${encodeURIComponent(page.cid)}`,
+      { credentials: "include", cache: "no-store" },
     );
     const player = await playerResponse.json();
     if (!playerResponse.ok || player.code !== 0) {
       throw new Error(player.message || "无法读取 B 站字幕列表。");
+    }
+    if (
+      String(player.data?.bvid || "") !== String(videoId) ||
+      Number(player.data?.cid) !== Number(page.cid)
+    ) {
+      throw new Error("B 站返回的字幕信息与当前视频不匹配，请刷新后重试。");
     }
 
     const subtitles = player.data?.subtitle?.subtitles || [];

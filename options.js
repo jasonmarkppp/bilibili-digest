@@ -51,7 +51,7 @@ const YTD_OPTIONS = (() => {
         "Digests, translations, and notes are stored only in this Chrome profile. You can remove them at any time.",
       clearCache: "Clear cached digests",
       deleteNotes: "Delete all notes",
-      resetData: "Reset extension data",
+      resetData: "Reset content data (keep keys)",
       footer:
         'Read <a href="PRIVACY.md" target="_blank">PRIVACY.md</a> in the repository for the complete data-flow description.',
       migrationWarning:
@@ -59,7 +59,7 @@ const YTD_OPTIONS = (() => {
       saving: "Saving…",
       addSupadataKey: "Add a Supadata API key.",
       addDeepseekKey: "Add a DeepSeek API key.",
-      saved: "Settings saved. Bilibili Digest will use them immediately.",
+      saved: "Settings saved and verified. Bilibili Digest will use them immediately.",
       saveFailed: "Could not save settings. Please try again.",
       copying: "Copying…",
       promptCopied: "Edited prompt copied.",
@@ -69,8 +69,9 @@ const YTD_OPTIONS = (() => {
         `Cleared ${count} cached digest${count === 1 ? "" : "s"}.`,
       notesDeleted: "Deleted all saved notes.",
       resetConfirm:
-        "Delete API keys, cached digests, translations, and saved notes from this Chrome profile?",
-      allDataDeleted: "All Bilibili Digest data was deleted.",
+        "Delete cached digests, translations, and saved notes? Your API keys will be kept.",
+      allDataDeleted:
+        "Content data was reset. Your API keys were kept.",
       settingsLoadFailed:
         "Could not load saved settings. You can still preview this page.",
     },
@@ -119,7 +120,7 @@ const YTD_OPTIONS = (() => {
         "摘要、翻译和笔记仅保存在当前 Chrome 个人资料中。你可以随时删除。",
       clearCache: "清除缓存的摘要",
       deleteNotes: "删除全部笔记",
-      resetData: "重置扩展数据",
+      resetData: "重置内容数据（保留密钥）",
       footer:
         '完整数据流说明请参阅仓库中的 <a href="PRIVACY.md" target="_blank">PRIVACY.md</a>。',
       migrationWarning:
@@ -127,7 +128,7 @@ const YTD_OPTIONS = (() => {
       saving: "正在保存…",
       addSupadataKey: "请添加 Supadata API 密钥。",
       addDeepseekKey: "请添加 DeepSeek API 密钥。",
-      saved: "设置已保存，Bilibili Digest 将立即使用新配置。",
+      saved: "设置已保存并验证成功，Bilibili Digest 将立即使用新配置。",
       saveFailed: "无法保存设置，请重试。",
       copying: "正在复制…",
       promptCopied: "已复制编辑后的提示词。",
@@ -135,8 +136,8 @@ const YTD_OPTIONS = (() => {
       clearedDigests: ({ count }) => `已清除 ${count} 条缓存摘要。`,
       notesDeleted: "已删除全部已保存的笔记。",
       resetConfirm:
-        "要从当前 Chrome 个人资料中删除 API 密钥、缓存摘要、翻译和已保存的笔记吗？",
-      allDataDeleted: "已删除全部 Bilibili Digest 本地数据。",
+        "要删除缓存摘要、翻译和已保存的笔记吗？DeepSeek 与百炼 API 密钥会保留。",
+      allDataDeleted: "已重置内容数据，API 密钥已保留。",
       settingsLoadFailed: "无法加载已保存的设置，但你仍可预览此页面。",
     },
   };
@@ -262,6 +263,37 @@ const YTD_OPTIONS = (() => {
     const normalizedLanguage = normalizeLanguage(language);
     await storage.set({ [LANGUAGE_STORAGE_KEY]: normalizedLanguage });
     return normalizedLanguage;
+  }
+
+  async function resetContentData(storage, settingsKey, language) {
+    const stored = await storage.get(settingsKey);
+    const savedSettings = stored[settingsKey];
+
+    await storage.clear();
+
+    const restored = {
+      [LANGUAGE_STORAGE_KEY]: normalizeLanguage(language),
+    };
+    if (savedSettings && typeof savedSettings === "object") {
+      restored[settingsKey] = savedSettings;
+    }
+    await storage.set(restored);
+
+    return savedSettings || null;
+  }
+
+  async function persistAndVerifySettings(storage, settingsKey, settings) {
+    await storage.set({ [settingsKey]: settings });
+    const stored = await storage.get(settingsKey);
+    const verified = stored[settingsKey];
+    if (
+      !verified ||
+      verified.aiApiKey !== settings.aiApiKey ||
+      verified.asrApiKey !== settings.asrApiKey
+    ) {
+      throw new Error("SETTINGS_WRITE_VERIFICATION_FAILED");
+    }
+    return verified;
   }
 
   function updateLanguageButtonState(buttons, language) {
@@ -449,13 +481,17 @@ const YTD_OPTIONS = (() => {
         asrApiKey: asrApiKeyInput.value,
       });
 
-      if (!settings.aiApiKey) {
+      if (!settings.aiApiKey && !settings.asrApiKey) {
         setStatus(saveStatus, "addDeepseekKey");
         return;
       }
 
       try {
-        await storage.set({ [settingsApi.STORAGE_KEY]: settings });
+        await persistAndVerifySettings(
+          storage,
+          settingsApi.STORAGE_KEY,
+          settings,
+        );
         setStatus(saveStatus, "saved");
       } catch (_error) {
         setStatus(saveStatus, "saveFailed");
@@ -493,8 +529,11 @@ const YTD_OPTIONS = (() => {
       );
       if (!confirmed) return;
 
-      await storage.clear();
-      await persistPreferredLanguage(storage, currentLanguage);
+      await resetContentData(
+        storage,
+        settingsApi.STORAGE_KEY,
+        currentLanguage,
+      );
       await loadSettings();
       setStatus(dataStatus, "allDataDeleted");
     }
@@ -532,7 +571,9 @@ const YTD_OPTIONS = (() => {
     createStorageAdapter,
     normalizeLanguage,
     persistPreferredLanguage,
+    persistAndVerifySettings,
     readPreferredLanguage,
+    resetContentData,
     translate,
     updateLanguageButtonState,
     updateLocalizedPrompt,

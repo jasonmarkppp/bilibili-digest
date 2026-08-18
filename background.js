@@ -522,45 +522,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-/**
- * Reads the current video's full details straight from YouTube's player.
- *
- * Content scripts live in an isolated world and can't touch the page's own
- * JavaScript. But with the "scripting" permission we can run a tiny function
- * in the page's MAIN world, where YouTube's player object lives. Its
- * getPlayerResponse() carries videoDetails with the FULL description —
- * unlike the DOM, which truncates it until the user clicks "...more".
- *
- * Returns null on any failure so callers can fall back to DOM scraping.
- */
-async function getPlayerVideoDetails(tabId) {
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: () => {
-        try {
-          const player = document.getElementById("movie_player");
-          const details = player?.getPlayerResponse?.()?.videoDetails;
-          if (!details) return null;
-          return {
-            title: details.title || "",
-            channelName: details.author || "",
-            description: details.shortDescription || "",
-            duration: Number(details.lengthSeconds) || 0,
-          };
-        } catch (e) {
-          return null;
-        }
-      },
-    });
-    return results?.[0]?.result || null;
-  } catch (e) {
-    console.warn("[YouTube Digest BG] Player details unavailable:", e.message);
-    return null;
-  }
-}
-
 // ============================================================
 // TRANSCRIPT FETCHING VIA BILIBILI API
 // ============================================================

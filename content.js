@@ -27,6 +27,7 @@ let ytdNoteButtonTimer = null;
 let ytdNoteKeyboardListenerAdded = false;
 let ytdNoteButtonRetryTimer = null;
 let ytdNoteFullscreenListenerAdded = false;
+let ytdNotePlayerContainer = null;
 let ytdDigestButton = null;
 let digestButtonObserver = null;
 let digestButtonReconcileTimer = null;
@@ -258,8 +259,8 @@ function createDigestButton() {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    position: relative;
-    z-index: 2;
+    position: absolute;
+    z-index: 9998;
     transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
     box-shadow: 0 4px 14px rgba(251, 114, 153, 0.3);
     flex: 0 0 auto;
@@ -303,6 +304,18 @@ function createDigestButton() {
   return digestButton;
 }
 
+function positionDigestButton(digestButton, shareButton) {
+  if (!digestButton || !shareButton) return;
+  const shareRect = shareButton.getBoundingClientRect();
+  if (shareRect.width <= 0 || shareRect.height <= 0) return;
+
+  digestButton.style.left = `${Math.round(window.scrollX + shareRect.right + 12)}px`;
+  digestButton.style.top = `${Math.round(
+    window.scrollY + shareRect.top + (shareRect.height - digestButton.offsetHeight) / 2,
+  )}px`;
+  digestButton.style.right = "auto";
+}
+
 /**
  * Reconciles the Digest button with YouTube's currently visible action row.
  * This is intentionally idempotent because YouTube rebuilds its watch page
@@ -339,22 +352,17 @@ function injectDigestButton() {
     if (button !== digestButton) button.remove();
   });
 
-  // v1.1.7 allowed free dragging. Remove its saved viewport coordinate once;
-  // the button now belongs to the responsive toolbar and follows Share.
+  // v1.1.7 allowed free dragging. Remove its saved viewport coordinate once.
+  // Keep the button outside Bilibili's Vue-owned toolbar: inserting foreign
+  // children there can corrupt its virtual DOM during responsive re-renders.
   localStorage.removeItem(DIGEST_BUTTON_POSITION_KEY);
-  digestButton.style.position = "relative";
-  digestButton.style.left = "auto";
-  digestButton.style.top = "auto";
-  digestButton.style.right = "auto";
 
   const shareButton = findShareButton(actionsContainer);
-  if (shareButton) {
-    if (shareButton.nextElementSibling !== digestButton) {
-      shareButton.insertAdjacentElement("afterend", digestButton);
-    }
-  } else if (digestButton.parentElement !== actionsContainer) {
-    actionsContainer.appendChild(digestButton);
+  if (!shareButton) return false;
+  if (digestButton.parentElement !== document.body) {
+    document.body.appendChild(digestButton);
   }
+  positionDigestButton(digestButton, shareButton);
 
   debugLog("[YouTube Digest Content] Digest button reconciled");
   return true;
@@ -376,6 +384,13 @@ function setupDigestButtonResizeListener() {
 
   window.addEventListener("resize", () => {
     scheduleDigestButtonReconciliation(120);
+    if (ytdNoteButton && ytdNotePlayerContainer) {
+      positionNoteButton(
+        ytdNoteButton,
+        ytdNotePlayerContainer,
+        document.fullscreenElement || document.webkitFullscreenElement || null,
+      );
+    }
   });
   digestButtonResizeListenerAdded = true;
 }
@@ -440,24 +455,22 @@ function injectNoteButton() {
     return;
   }
 
-  // Keep the existing live button when possible, but move it if Bilibili has
-  // rebuilt/reparented the player during fullscreen or web-fullscreen changes.
+  const fullscreenElement =
+    document.fullscreenElement || document.webkitFullscreenElement || null;
+  const noteHost = fullscreenElement || document.body;
+
+  // Keep the existing live button when possible, but move it between the
+  // body-owned overlay layer and native fullscreen root when required.
   const existingButton = document.getElementById("ytd-note-button");
   if (existingButton && ytdNoteButton === existingButton && existingButton.isConnected) {
-    if (existingButton.parentElement !== playerContainer) {
-      playerContainer.appendChild(existingButton);
+    if (existingButton.parentElement !== noteHost) {
+      noteHost.appendChild(existingButton);
     }
+    ytdNotePlayerContainer = playerContainer;
+    positionNoteButton(existingButton, playerContainer, fullscreenElement);
     return;
   }
   if (existingButton) existingButton.remove();
-
-  // Ensure the player container has relative positioning for absolute children
-  if (
-    window.getComputedStyle(playerContainer).position === "static" ||
-    !playerContainer.style.position
-  ) {
-    playerContainer.style.position = "relative";
-  }
 
   debugLog("[YouTube Digest Content] Injecting note button");
 
@@ -498,6 +511,7 @@ function injectNoteButton() {
   `;
 
   ytdNoteButton = noteButton;
+  ytdNotePlayerContainer = playerContainer;
 
   // Show button when mouse enters or moves over the player.
   // Hide after 2 seconds of idle or when the mouse leaves.
@@ -537,9 +551,28 @@ function injectNoteButton() {
     await saveCurrentNote();
   });
 
-  playerContainer.appendChild(noteButton);
+  noteHost.appendChild(noteButton);
+  positionNoteButton(noteButton, playerContainer, fullscreenElement);
 
   debugLog("[YouTube Digest Content] Note button injected");
+}
+
+function positionNoteButton(noteButton, playerContainer, fullscreenElement) {
+  if (!noteButton || !playerContainer) return;
+
+  if (fullscreenElement) {
+    noteButton.style.top = "16px";
+    noteButton.style.right = "16px";
+    noteButton.style.left = "auto";
+    return;
+  }
+
+  const rect = playerContainer.getBoundingClientRect();
+  noteButton.style.top = `${Math.round(window.scrollY + rect.top + 16)}px`;
+  noteButton.style.left = `${Math.round(
+    window.scrollX + rect.right - noteButton.offsetWidth - 16,
+  )}px`;
+  noteButton.style.right = "auto";
 }
 
 function handleNoteFullscreenChange() {
@@ -860,6 +893,7 @@ function handleBilibiliNavigation() {
 
   // Reset note button state
   ytdNoteButton = null;
+  ytdNotePlayerContainer = null;
   clearTimeout(ytdNoteButtonTimer);
   ytdNoteButtonTimer = null;
   if (ytdNoteButtonRetryTimer) {

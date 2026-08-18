@@ -209,7 +209,11 @@ function findDigestButtonHost() {
       ".video-toolbar-left, .video-toolbar-container .video-toolbar-left, .toolbar-left",
     ),
   );
-  return candidates.find(isVisibleDigestHost) || document.body;
+  // Never fall back to document.body. Before Bilibili finishes rendering the
+  // toolbar, a normal-flow button appended to body shifts the entire watch
+  // page downward and leaves a large blank area above the video. The existing
+  // MutationObserver will retry as soon as the real toolbar becomes visible.
+  return candidates.find(isVisibleDigestHost) || null;
 }
 
 function findShareButton(host) {

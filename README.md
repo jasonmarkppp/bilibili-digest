@@ -380,16 +380,17 @@ npm run package
 输出文件位于：
 
 ```text
-dist/bilibili-digest-v1.2.3.zip
+dist/bilibili-digest-v1.2.4.zip
 ```
 
 ---
 
 ## 🧪 当前版本功能
 
-### v1.2.3
+### v1.2.4
 
 - [x] B 站视频页面 AI 总结按钮
+- [x] 修复操作栏尚未加载时页面顶部出现大块空白
 - [x] 按钮跟随在转发右侧
 - [x] Chrome / Microsoft Edge 支持
 - [x] Chromium Manifest V3

@@ -46,39 +46,23 @@ It is currently publicly available through **Microsoft Edge Add-ons**.
 
 ### Bilibili 原生页面集成
 
-<!--
-把「B站视频页面 + AI总结按钮」截图放到：
-docs/images/bilibili-page.png
--->
+<img width="1912" height="921" alt="image" src="https://github.com/user-attachments/assets/79741773-2f71-4e66-8489-f1b028dc9dff" />
 
-![Bilibili Digest 页面集成](docs/images/bilibili-page.png)
 
 ### AI 总结 / 中文章节 / 时间线
 
-<!--
-把「右侧 AI 总结侧边栏」截图放到：
-docs/images/ai-summary.png
--->
+<img width="1914" height="950" alt="image" src="https://github.com/user-attachments/assets/d863ff2a-16a9-4f0e-87a0-f83a38e98553" />
 
-![Bilibili Digest AI Summary](docs/images/ai-summary.png)
 
 ### 字幕 / 笔记 / 时间戳跳转
 
-<!--
-把「字幕、笔记或者时间戳跳转」截图放到：
-docs/images/notes-timeline.png
--->
+<img width="1899" height="947" alt="image" src="https://github.com/user-attachments/assets/31e7cbc6-58fb-4e70-9c70-618ef0be6696" />
 
-![Bilibili Digest Notes](docs/images/notes-timeline.png)
 
 ### Microsoft Edge Add-ons
 
-<!--
-把「Microsoft Edge 商店页面」或者 v1.2.8 Live 截图放到：
-docs/images/edge-store.png
--->
+<img width="1462" height="846" alt="image" src="https://github.com/user-attachments/assets/9ae9b385-bac0-4b93-a16f-9f27c50b59ef" />
 
-![Bilibili Digest Microsoft Edge Add-ons](docs/images/edge-store.png)
 
 ---
 

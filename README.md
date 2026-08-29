@@ -1,31 +1,204 @@
 # Bilibili Digest 📺
 
 > **把 B 站长视频，变成可以阅读、跳转、总结和保存的中文学习资料。**
-> 一个适用于 Chrome、Microsoft Edge 及其他 Chromium 浏览器的 B 站视频 AI 总结扩展。
 
-Bilibili Digest 会直接显示在哔哩哔哩视频页面中。配置阿里云百炼 API Key 后，默认使用 Fun-ASR 识别当前视频音轨；未配置百炼 Key 时，才通过 B 站 WBI 播放器接口读取原生字幕。获得文字后，再由 DeepSeek 生成中文概览、章节时间线和关键观点。
+一个适用于 **Microsoft Edge、Google Chrome 及其他 Chromium 浏览器**的开源 B 站 AI 视频学习扩展。
 
-它不是简单地把整段字幕丢给 AI，而是围绕 B 站真实使用场景处理了几个关键问题：**视频切换、分 P / 合集识别、时间戳跳转、播放位置跟随、全屏笔记、中文章节和多格式导出。**
+Bilibili Digest 会直接集成到哔哩哔哩视频页面中，将视频转换为：
 
-b站教学视频链接：https://b23.tv/xls42lN
-> [!IMPORTANT]
-> 本项目基于 [zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest) 二次开发，针对哔哩哔哩网页结构和国内服务重新适配，不是哔哩哔哩官方产品。
+**字幕 → 中文概览 → 章节时间线 → 关键观点 → 笔记 → 可导出资料**
+
+<p align="center">
+  <a href="https://microsoftedge.microsoft.com/addons/detail/bilibili-digest/aajfbjohlhgcmdoecfgbiopkpjojdaca">
+    <strong>🛍️ Microsoft Edge Add-ons 安装</strong>
+  </a>
+  ·
+  <a href="https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.8">
+    <strong>📦 Latest Release v1.2.8</strong>
+  </a>
+  ·
+  <a href="https://b23.tv/xls42lN">
+    <strong>▶️ B 站使用教程</strong>
+  </a>
+</p>
+
+<p align="center">
+  <strong>Microsoft Edge Add-ons：已正式发布 ✅</strong>
+  <br>
+  Open Source · MIT License · Manifest V3
+</p>
 
 ---
 
-## ✨ 核心功能
+## 🌍 English Summary
 
-### 1. B 站原生页面集成
+**Bilibili Digest** is an open-source AI learning companion built specifically for Bilibili.
 
-扩展会在视频操作栏中加入 **AI 总结** 按钮：
+It turns long-form Bilibili videos into transcripts, Chinese summaries, timestamped chapters, key insights, notes and exportable learning materials.
+
+The extension includes Bilibili-specific support for video switching, multi-part videos, collections, native subtitles, Fun-ASR transcription, timestamp navigation, fullscreen notes and per-video local caching.
+
+It is currently publicly available through **Microsoft Edge Add-ons**.
+
+---
+
+## 🖼️ Preview
+
+### Bilibili 原生页面集成
+
+<!--
+把「B站视频页面 + AI总结按钮」截图放到：
+docs/images/bilibili-page.png
+-->
+
+![Bilibili Digest 页面集成](docs/images/bilibili-page.png)
+
+### AI 总结 / 中文章节 / 时间线
+
+<!--
+把「右侧 AI 总结侧边栏」截图放到：
+docs/images/ai-summary.png
+-->
+
+![Bilibili Digest AI Summary](docs/images/ai-summary.png)
+
+### 字幕 / 笔记 / 时间戳跳转
+
+<!--
+把「字幕、笔记或者时间戳跳转」截图放到：
+docs/images/notes-timeline.png
+-->
+
+![Bilibili Digest Notes](docs/images/notes-timeline.png)
+
+### Microsoft Edge Add-ons
+
+<!--
+把「Microsoft Edge 商店页面」或者 v1.2.8 Live 截图放到：
+docs/images/edge-store.png
+-->
+
+![Bilibili Digest Microsoft Edge Add-ons](docs/images/edge-store.png)
+
+---
+
+## ✨ Bilibili Digest 能做什么？
+
+Bilibili Digest 并不是简单地把一整段字幕丢给 AI。
+
+它围绕 B 站真实使用场景处理了几个关键问题：
+
+- B 站单页应用的视频切换
+- BV / 分 P / 合集分集识别
+- B 站原生字幕读取
+- 无字幕视频 Fun-ASR 语音识别
+- 中文 AI 概览
+- 中文章节时间线
+- 时间戳点击跳转
+- 字幕跟随播放位置
+- 普通页面与全屏笔记
+- 不同视频的数据隔离
+- Markdown / HTML 导出
+- 复制到飞书
+- 本地缓存
+- Chrome / Edge Manifest V3 支持
+
+---
+
+## 🚀 快速安装
+
+### 方法一：Microsoft Edge Add-ons（推荐）
+
+Bilibili Digest 已正式发布到 Microsoft Edge Add-ons。
+
+👉 **[安装 Bilibili Digest](https://microsoftedge.microsoft.com/addons/detail/bilibili-digest/aajfbjohlhgcmdoecfgbiopkpjojdaca)**
+
+安装完成后：
+
+1. 打开或刷新 B 站视频页面。
+2. 在视频操作栏找到 **AI 总结**。
+3. 点击后打开浏览器侧边栏。
+4. 根据需要配置 DeepSeek API Key 和阿里云百炼 API Key。
+
+通过 Microsoft Edge Add-ons 安装后，可以正常接收后续商店版本更新。
+
+---
+
+### 方法二：GitHub Release
+
+也可以通过 GitHub Release 获取正式发布版本：
+
+👉 **[Bilibili Digest v1.2.8](https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.8)**
+
+下载并解压后：
+
+#### Chrome
+
+1. 打开：
+
+```text
+chrome://extensions/
+```
+
+2. 开启右上角 **开发者模式**。
+3. 点击 **加载已解压的扩展程序**。
+4. 选择解压后的 Bilibili Digest 文件夹。
+
+#### Microsoft Edge
+
+1. 打开：
+
+```text
+edge://extensions/
+```
+
+2. 开启 **开发人员模式**。
+3. 点击 **加载解压缩的扩展**。
+4. 选择解压后的文件夹。
+
+安装完成后刷新已经打开的 B 站视频页面。
+
+---
+
+### 方法三：从源码加载
+
+```bash
+git clone https://github.com/jasonmarkppp/bilibili-digest.git
+cd bilibili-digest
+```
+
+然后在 Chrome / Edge 扩展管理页面开启开发者模式并直接加载项目根目录。
+
+扩展运行本身不依赖 npm。
+
+npm 主要用于：
+
+- 自动化测试
+- 发布检查
+- 生成 Release ZIP
+
+---
+
+# ✨ 核心功能
+
+## 1. B 站原生页面集成
+
+扩展会直接在 Bilibili 视频操作栏中加入：
+
+```text
+AI 总结
+```
+
+按钮会：
 
 - 固定跟随在“转发”按钮右侧
-- 页面放大、缩小后仍跟随操作栏布局
-- 点击后打开浏览器侧边栏
-- 不需要复制视频链接到其他网站
-- 支持 B 站单页应用的视频切换
+- 页面缩放后继续跟随工具栏布局
+- 点击后打开浏览器原生 Side Panel
+- 无需复制视频链接
+- 无需进入第三方总结网站
+- 支持 B 站 SPA 页面的视频切换
 
-侧边栏包含：
+侧边栏主要包含：
 
 ```text
 字幕
@@ -35,97 +208,190 @@ b站教学视频链接：https://b23.tv/xls42lN
 
 ---
 
-### 2. 当前视频识别
+## 2. BV / 分 P / 合集状态隔离
 
-B 站可能在不刷新浏览器的情况下切换 BV、分 P 或合集分集。
+B 站经常在**不刷新整个网页**的情况下切换：
 
-Bilibili Digest 会根据当前页面的：
+```text
+BV
+分 P
+合集
+分集
+```
+
+如果只按照页面 URL 或初始视频状态处理，很容易出现：
+
+> 打开第二个视频，却仍然看到第一个视频的字幕和总结。
+
+因此 Bilibili Digest 会根据当前：
 
 ```text
 BV 号
+CID
 分 P 参数
 合集 / 分集标识
-当前活动视频链接
+当前活动视频
 ```
 
-创建独立状态和缓存，避免打开第二个视频后仍显示第一个视频的字幕或总结。
+建立独立状态与本地缓存。
+
+不同视频之间的：
+
+- 字幕
+- 总结
+- 笔记
+- 时间线
+- 缓存
+
+都会进行隔离。
 
 ---
 
-### 3. 配置 ASR 后默认使用语音识别
+## 3. Fun-ASR + B 站原生字幕双通道
 
-当前版本把 Fun-ASR 作为配置后的主要文字来源：
+当前版本采用两种文字来源。
+
+### 已配置阿里云百炼 API Key
+
+默认流程：
 
 ```text
-已配置阿里云百炼 API Key
-↓
-点击 AI 总结后直接使用 Fun-ASR
+点击 AI 总结
+      ↓
+获取当前 B 站音轨
+      ↓
+选择低码率音轨
+      ↓
+Fun-ASR
+      ↓
+带时间戳文本
 ```
 
-这样可以绕开 B 站原生字幕偶发返回错误内容、AI 字幕质量不稳定或视频本身没有字幕的问题。
+这样可以解决：
 
-如果没有配置百炼 API Key，扩展才会请求：
+- 视频本身没有字幕
+- B 站 AI 字幕质量不稳定
+- 原生字幕偶发错配
+- 部分视频无法正常返回字幕
+
+---
+
+### 未配置百炼 API Key
+
+扩展会尝试请求：
 
 ```text
 https://api.bilibili.com/x/player/wbi/v2
 ```
 
-读取 B 站原生字幕，并校验接口返回的 `bvid`、`cid` 是否与当前视频一致，避免字幕错配。
+读取 B 站当前视频原生字幕。
 
-ASR 不会在打开页面时自动预加载。只有点击 AI 总结后才会开始下载和识别，从而减少：
+同时会校验接口返回的：
 
-- 不必要的流量消耗
-- 页面打开后的后台任务
-- API 免费额度消耗
-- 用户只是浏览视频时的等待
+```text
+bvid
+cid
+```
+
+是否和当前视频一致。
+
+只有身份匹配的字幕才会继续使用，从而减少：
+
+> 第二个视频误用了第一个视频字幕
+
+的问题。
 
 ---
 
-### 4. 中文 AI 概览
+## 4. 按需调用 ASR
 
-DeepSeek 会根据当前视频字幕或 ASR 结果生成：
+Bilibili Digest 不会在打开每一个视频时立即执行语音识别。
+
+只有用户主动点击：
+
+```text
+AI 总结
+```
+
+之后才会开始：
+
+```text
+音轨下载
+↓
+上传
+↓
+ASR
+↓
+AI 总结
+```
+
+这样可以减少：
+
+- 无意义的网络流量
+- 页面加载后的后台任务
+- API 免费额度消耗
+- 用户只是普通看视频时产生的等待
+
+---
+
+## 5. 中文 AI 概览
+
+获得字幕或 ASR 文本以后，可以交给 DeepSeek 生成：
 
 - 视频内容概览
 - 简体中文章节时间线
 - 每章内容说明
 - 关键观点
-- 值得记录的原话
+- 重点内容
+- 值得记录的信息
 - 可继续整理的学习笔记
 
-章节标题和说明会明确要求使用简体中文，不会因为字幕中混有英文术语就生成整套英文目录。
+章节标题和章节说明会明确要求使用**简体中文**。
+
+即使视频中包含大量英文术语，也不会轻易生成一整套英文目录。
 
 ---
 
-### 5. 播放位置联动
+## 6. 时间戳跳转
 
-点击字幕或概览中的时间戳，播放器会跳转到对应位置：
+字幕和 AI 总结中的时间可以直接与播放器联动。
+
+例如：
 
 ```text
-00:27 → 跳转到视频第 27 秒
-04:18 → 跳转到视频第 4 分 18 秒
+00:27 → 视频第 27 秒
+
+04:18 → 视频第 4 分 18 秒
+
+35:42 → 视频第 35 分 42 秒
 ```
 
-字幕列表也可以跟随当前播放进度，方便边看视频边阅读内容。
+点击时间戳后，播放器会直接 Seek 到对应位置。
+
+字幕列表也可以根据当前播放进度进行跟随。
 
 ---
 
-### 6. 普通页面与全屏笔记
+## 7. 普通页面与全屏笔记
 
-除了侧边栏中的笔记页面，扩展也适配了播放器全屏场景。
+除了 Side Panel 中的笔记功能，Bilibili Digest 也适配了播放器全屏场景。
 
-可以在观看过程中记录：
+观看视频过程中可以记录：
 
 - 当前时间戳
 - 临时想法
 - 视频重点
 - 待办事项
-- 需要回看的片段
+- 值得回看的片段
+- 学习笔记
 
-笔记会绑定当前 BV 和分集，不会混入其他视频。
+笔记绑定当前视频身份。
+
+切换 BV / 分 P 后，不会和其他视频混在一起。
 
 ---
 
-### 7. 多格式导出
+## 8. 多格式导出
 
 当前支持：
 
@@ -135,23 +401,34 @@ HTML
 复制到飞书
 ```
 
-适合继续整理到飞书文档、飞书知识库、Obsidian、Notion、Typora、个人博客或本地 HTML 文件。
+可以继续整理到：
+
+- 飞书文档
+- 飞书知识库
+- Obsidian
+- Notion
+- Typora
+- GitHub
+- 个人博客
+- 本地 HTML
+
+Bilibili Digest 的目标不是只生成一次性 AI 输出，而是让视频内容可以继续进入后续知识管理流程。
 
 ---
 
-## 🌐 浏览器兼容性
+# 🌐 浏览器兼容性
 
 | 浏览器 | 建议版本 | 支持情况 |
 | --- | ---: | --- |
+| Microsoft Edge | 116+ | ✅ 正式支持 / 已上架商店 |
 | Google Chrome | 116+ | ✅ 主要支持 |
-| Microsoft Edge | 116+ | ✅ 主要支持 |
-| 其他 Chromium 浏览器 | 116+ | ⚠️ 取决于 Side Panel API 支持情况 |
+| 其他 Chromium 浏览器 | 116+ | ⚠️ 取决于 Side Panel API |
 | Firefox | — | ❌ 当前不支持 |
 | Safari | — | ❌ 当前不支持 |
 
-Chrome 和 Microsoft Edge 使用同一个扩展目录和安装包，**不需要单独下载 Edge 版本**。
+Chrome 和 Microsoft Edge 使用同一套扩展代码。
 
-其他 Chromium 浏览器需要支持：
+主要依赖：
 
 ```text
 Manifest V3
@@ -162,149 +439,191 @@ chrome.storage.local
 
 ---
 
-## 🚀 快速安装
-
-### 方法一：加载发布包
-
-1. 下载 `bilibili-digest-main.zip`。
-2. 将 ZIP 完整解压到固定文件夹。
-3. 不要在加载扩展后删除或移动该文件夹。
-
-#### Chrome
-
-1. 打开 `chrome://extensions/`。
-2. 开启右上角的 **开发者模式**。
-3. 点击 **加载已解压的扩展程序**。
-4. 选择刚才解压的文件夹。
-
-#### Microsoft Edge
-
-1. 打开 `edge://extensions/`。
-2. 开启左侧的 **开发人员模式**。
-3. 点击 **加载解压缩的扩展**。
-4. 选择刚才解压的文件夹。
-
-安装完成后，刷新已经打开的 B 站视频页面。
-
----
-
-### 方法二：从源码加载
-
-```bash
-git clone <你的仓库地址>
-cd bilibili-digest
-```
-
-然后在 Chrome 或 Edge 的扩展管理页面中直接选择项目根目录。
-
-扩展运行不依赖 npm；npm 只用于测试和生成发布包。
-
----
-
-## 🔑 API 配置
+# 🔑 API 配置
 
 | 服务 | 是否必需 | 用途 |
 | --- | --- | --- |
-| DeepSeek API Key | 必需 | 概览、章节、观点、翻译和笔记整理 |
-| 阿里云百炼 API Key | 推荐配置 | 配置后默认使用 Fun-ASR 作为字幕来源 |
+| DeepSeek API Key | 必需 | AI 概览、章节、观点及内容整理 |
+| 阿里云百炼 API Key | 推荐 | Fun-ASR 视频语音识别 |
 
-点击扩展的 **设置**，填写对应 API Key 后保存即可。
-
-密钥只保存在当前浏览器的扩展本地存储中。重新安装扩展或清除扩展数据后，需要重新配置。
-
-### 更新时保留 API Key
-
-**不要先删除旧扩展。** Chrome 官方说明，扩展被移除时会清除它的 `chrome.storage.local`；即使稍后装回相同扩展 ID，已经删除的本地 Key 也不会自动回来。
-
-也不要每次把新版本解压到不同文件夹后删除重装。固定身份公钥可以稳定扩展 ID，但不能阻止浏览器在“卸载”操作时主动清除本地存储。
-
-开发者模式下建议使用固定目录更新：
+打开 Bilibili Digest 的：
 
 ```text
-保留原扩展文件夹
-      ↓
-把新版本文件覆盖到原文件夹
-      ↓
-打开 chrome://extensions/ 或 edge://extensions/
-      ↓
-点击该扩展的“重新加载”
+设置
 ```
 
-只要扩展 ID 没有变化，`chrome.storage.local` 中的 DeepSeek 和百炼 API Key 就会继续保留。通过 Chrome Web Store 或 Microsoft Edge 加载项商店正常升级时，扩展 ID 同样保持不变，一般不需要重新填写 Key。
+填写对应 API Key 后保存即可。
 
-从 v1.2.6 起，发布包在 `manifest.json` 中包含固定的扩展身份公钥。即使开发者模式下更换了解压目录，Chrome / Edge 也可以据此生成稳定的扩展 ID。首次从更早版本切换到 v1.2.6 时扩展 ID 可能改变一次，需要重新填写一次 Key；之后请保留该 `key` 字段，不要在二次开发时重新生成。
+当前版本不会把 API Key 上传到项目自己的服务器。
+
+密钥保存在：
+
+```text
+chrome.storage.local
+```
+
+也就是当前浏览器的扩展本地存储。
 
 ---
 
-## 🧠 当前工作原理
+## 更新扩展时如何保留 API Key？
+
+### 商店版本
+
+如果通过 Microsoft Edge Add-ons 正常更新：
+
+```text
+旧版本
+↓
+商店自动更新
+↓
+扩展 ID 保持不变
+↓
+本地 API Key 一般继续保留
+```
+
+---
+
+### 开发者模式
+
+**不要先删除旧扩展。**
+
+Chrome / Edge 在卸载扩展时会清除该扩展对应的本地数据。
+
+推荐：
+
+```text
+保留原扩展目录
+      ↓
+使用新版本覆盖原文件
+      ↓
+打开扩展管理页面
+      ↓
+点击“重新加载”
+```
+
+只要扩展身份保持一致：
+
+```text
+chrome.storage.local
+```
+
+中的 Key 就可以继续使用。
+
+从 `v1.2.6` 开始，项目在 `manifest.json` 中加入固定扩展身份公钥，用于提高开发者模式下扩展 ID 的稳定性。
+
+---
+
+# 🧠 工作原理
 
 ```text
 打开 B 站视频
       ↓
-识别当前 BV / 分 P / 合集分集
+识别当前 BV / CID / 分 P / 合集
       ↓
 用户点击 AI 总结
       ↓
-是否配置百炼 API Key
+判断是否配置百炼 API Key
       ↓
-已配置 → 获取低码率音轨 → Fun-ASR 识别
-      ↓
-未配置 → 请求 /x/player/wbi/v2 → 校验 bvid / cid → 读取原生字幕
-                      ↓
-                生成带时间戳文本
-                      ↓
-                 DeepSeek 分析
-                      ↓
-          概览 / 中文章节 / 观点 / 笔记
-                      ↓
-               按视频保存到本地
+┌──────────────────────┬───────────────────────┐
+│ 已配置百炼            │ 未配置百炼             │
+│                      │                       │
+│ 获取低码率音轨        │ 请求 /x/player/wbi/v2 │
+│ ↓                    │ ↓                     │
+│ Fun-ASR              │ 校验 bvid / cid       │
+│ ↓                    │ ↓                     │
+│ 带时间戳文本          │ B站原生字幕            │
+└──────────┬───────────┴───────────┬───────────┘
+           ↓
+        文本统一处理
+           ↓
+        DeepSeek
+           ↓
+  概览 / 中文章节 / 观点
+           ↓
+   时间戳 / 笔记 / 导出
+           ↓
+      按视频本地保存
 ```
 
-当前设计坚持：
+当前核心设计：
 
-> **配置 ASR 后默认使用 ASR；未配置时读取 WBI 原生字幕；所有分析结果按视频隔离。**
-
----
-
-## 🎙️ 为什么使用阿里云百炼 Fun-ASR？
-
-原上游项目主要围绕 YouTube 和 Supadata 工作，但 Supadata 的视频平台支持范围不包含 B 站。
-
-因此本项目将配置百炼 Key 后的默认识别流程改为阿里云百炼 Fun-ASR：
-
-- 国内账号注册和访问更方便
-- 中文识别更符合当前场景
-- 不要求用户本地安装 Python、模型和运行环境
-- 不需要长期占用本机 CPU / GPU
-- 浏览器扩展只在用户需要时调用
-
-Fun-ASR 是否免费取决于阿里云百炼当前的免费额度和计费规则。本项目不会绕过平台计费，也不承诺永久免费。
+> **配置 ASR 后默认使用 ASR；未配置时使用经过视频身份校验的 B 站原生字幕；所有结果按照视频身份隔离。**
 
 ---
 
-## ⚡ ASR 速度说明
+# 🎙️ 为什么使用阿里云百炼 Fun-ASR？
 
-无字幕视频的完整流程包含：
+原上游项目主要围绕 YouTube 和 Supadata 工作。
+
+但 Bilibili Digest 的使用场景主要面向：
 
 ```text
-获取视频播放信息
-下载 B 站音轨
-上传临时音频
-提交识别任务
-等待 Fun-ASR 完成
-拉取识别结果
+Bilibili
+中文视频
+国内用户
+```
+
+因此项目重新设计了文字识别链路。
+
+Fun-ASR 的优势包括：
+
+- 国内账号使用更方便
+- 中文语音识别更符合当前场景
+- 用户不需要本地部署 Python
+- 不需要下载本地 ASR 模型
+- 不长期占用 CPU / GPU
+- 浏览器只在用户需要时调用
+
+Fun-ASR 的免费额度和价格由阿里云百炼决定。
+
+本项目：
+
+- 不绕过平台计费
+- 不承诺永久免费
+- 不提供未经授权的 API 中转
+
+---
+
+# ⚡ ASR 为什么比字幕慢？
+
+无字幕视频需要完整经历：
+
+```text
+获取播放信息
+↓
+获取音轨
+↓
+下载低码率音频
+↓
+上传
+↓
+创建 Fun-ASR 任务
+↓
+等待识别
+↓
+获取结果
+↓
 DeepSeek 生成概览
 ```
 
-因此它一定会比直接读取字幕慢。
+因此一定比直接读取 B 站原生字幕慢。
 
-当前版本优先选择低码率音轨，以减少下载、上传和识别等待。视频越长、网络越慢、百炼任务越繁忙，耗时越明显。
+耗时主要受到：
+
+- 视频长度
+- 网络速度
+- B 站音轨下载速度
+- 阿里云任务队列
+- DeepSeek 响应时间
+
+影响。
 
 ---
 
-## ⚠️ HTTP 403 是什么？
+# ⚠️ HTTP 403
 
-B 站音轨地址通常带有临时鉴权参数，可能在一段时间后失效。
+B 站音轨 URL 通常包含临时鉴权信息。
 
 如果出现：
 
@@ -313,51 +632,71 @@ B 站音轨地址通常带有临时鉴权参数，可能在一段时间后失效
 B站音轨下载失败：HTTP 403
 ```
 
-可以依次尝试：
+建议：
 
-1. 刷新当前 B 站视频页面。
-2. 确认视频可以正常播放。
-3. 重新点击 AI 总结并发起 ASR。
-4. 如果扩展刚更新，在扩展管理页面重新加载扩展。
-5. 私密、付费、地区限制视频可能仍然无法下载音轨。
+1. 刷新 B 站视频页面。
+2. 确认当前视频可以正常播放。
+3. 重新点击 AI 总结。
+4. 更新扩展后重新加载扩展。
+5. 检查视频是否存在付费、地区、权限等限制。
 
-扩展会为 B 站媒体请求补充必要的来源信息，但无法保证所有受限视频都可以识别。
-
----
-
-## 📖 使用流程
-
-1. 打开一个公开的 B 站视频。
-2. 点击“转发”右侧的 **AI 总结**。
-3. 在侧边栏确认当前视频标题和 UP 主。
-4. 已配置百炼 API Key 时，等待 Fun-ASR 完成识别。
-5. 未配置百炼 API Key 时，插件尝试读取当前视频的 B 站原生字幕。
-6. 打开 **概览** 查看中文章节和关键观点。
-7. 点击章节或字幕时间戳跳转视频。
-8. 在 **笔记** 中记录内容。
-9. 导出 Markdown、HTML，或复制到飞书。
+私密、付费、地区限制或特殊权限视频不保证可以进行音轨识别。
 
 ---
 
-## 📁 项目结构
+# 📖 使用流程
+
+```text
+1. 打开公开 B 站视频
+        ↓
+2. 点击“AI 总结”
+        ↓
+3. 打开 Side Panel
+        ↓
+4. 获取字幕 / Fun-ASR
+        ↓
+5. 查看中文 AI 概览
+        ↓
+6. 点击时间戳跳转
+        ↓
+7. 记录笔记
+        ↓
+8. 导出 Markdown / HTML / 飞书
+```
+
+---
+
+# 📁 项目结构
 
 ```text
 bilibili-digest/
-├── manifest.json              # Chrome / Edge 扩展配置
-├── background.js              # API、ASR、缓存与后台消息
-├── content.js                 # B 站按钮、播放器和视频切换
-├── settings.js                # 设置读取与兼容逻辑
-├── sidepanel.html             # 侧边栏页面
-├── sidepanel.css              # 侧边栏 B 站主题样式
-├── sidepanel.js               # 字幕、概览、笔记与导出
-├── options.html               # 设置页面
+├── manifest.json
+├── background.js
+├── content.js
+├── settings.js
+│
+├── sidepanel.html
+├── sidepanel.css
+├── sidepanel.js
+│
+├── options.html
 ├── options.css
 ├── options.js
-├── prompts/                   # AI 分析提示词
-├── rules/                     # B 站音轨网络规则
-├── icons/                     # 扩展图标
-├── tests/                     # 自动化测试
-├── scripts/                   # 发布检查与打包脚本
+│
+├── prompts/
+├── rules/
+├── icons/
+│
+├── tests/
+├── scripts/
+│
+├── docs/
+│   └── images/
+│       ├── bilibili-page.png
+│       ├── ai-summary.png
+│       ├── notes-timeline.png
+│       └── edge-store.png
+│
 ├── PRIVACY.md
 ├── SECURITY.md
 ├── LICENSE
@@ -366,7 +705,7 @@ bilibili-digest/
 
 ---
 
-## 🧱 技术栈
+# 🧱 技术栈
 
 ```text
 Chrome Extension Manifest V3
@@ -375,31 +714,45 @@ HTML5
 CSS3
 Side Panel API
 Declarative Net Request
+Chrome Storage
 DeepSeek API
 阿里云百炼 Fun-ASR
+Bilibili Web API
 ```
 
-没有使用 React、Vue 或其他前端框架，扩展加载后可以直接运行。
+项目没有使用 React、Vue 等前端框架。
+
+扩展加载后可以直接运行。
 
 ---
 
-## 🛠️ 本地开发
+# 🛠️ 本地开发
+
+安装开发依赖：
 
 ```bash
-# 安装开发依赖
 npm install
+```
 
-# 运行全部测试
+运行测试：
+
+```bash
 npm test
+```
 
-# 运行发布检查
+执行发布检查：
+
+```bash
 npm run check
+```
 
-# 生成 ZIP 安装包
+生成发布包：
+
+```bash
 npm run package
 ```
 
-输出文件位于：
+当前版本输出：
 
 ```text
 dist/bilibili-digest-v1.2.8.zip
@@ -407,56 +760,74 @@ dist/bilibili-digest-v1.2.8.zip
 
 ---
 
-## 🧪 当前版本功能
+# 🧪 Release History
 
-### v1.2.8
+## v1.2.8
 
-- API 设置写入后立即从扩展存储读回校验，只有真实写入成功才显示“保存成功”。
-- 百炼 Key 可以单独保存，不再因为 DeepSeek Key 暂未填写而连带保存失败。
-- 明确开发者模式更新不能先删除旧扩展；卸载会由浏览器清除 `chrome.storage.local`，应覆盖固定目录后点击“重新加载”。
+- API 设置写入后立即从扩展存储读回校验
+- 只有真实写入成功才显示“保存成功”
+- 百炼 Key 可以独立保存
+- 修复 DeepSeek Key 未配置时影响百炼 Key 保存的问题
+- 完善开发者模式更新说明
+- Microsoft Edge Add-ons 正式发布
 
-### v1.2.7
+---
 
-- AI 总结与普通页面记笔记按钮改为外置绝对定位浮层，只读取转发按钮和播放器坐标，不再插入 B 站 Vue 管理的工具栏与播放器子树。
-- 删除未使用的 `scripting` 权限及主页面脚本执行代码，避免与 B 站页面运行环境发生不必要的交互。
-- 保留浏览器原生全屏记笔记；仅在进入全屏后把按钮临时放入全屏根节点。
+## v1.2.7
 
-### v1.2.6
+- AI 总结和普通页面记笔记按钮改为外置绝对定位浮层
+- 不再插入 B 站 Vue 管理的工具栏及播放器子树
+- 删除未使用的 `scripting` 权限
+- 降低与 B 站页面运行环境之间的干扰
+- 保留浏览器原生全屏笔记
 
-- 移除播放器容器的布局写入，并清理旧版本遗留的 `position` 覆盖，避免影响 B 站页面头部与播放器布局。
-- “重置扩展数据”改为“重置内容数据（保留密钥）”，清理摘要、翻译和笔记时不再删除 DeepSeek 与百炼 API Key。
-- 为开发者模式安装加入固定扩展身份公钥，避免每次从不同解压目录加载都生成新的扩展 ID。
+---
 
-### v1.2.5
+## v1.2.6
 
-- 修复扩展覆盖 B 站播放器定位样式后，页面顶部出现大块空白的问题。
-- AI 总结按钮仍固定跟随在转发按钮右侧，不再回退插入页面根节点。
+- 移除播放器容器布局写入
+- 修复可能影响 B 站播放器和页面头部布局的问题
+- “重置扩展数据”改为“重置内容数据（保留密钥）”
+- 清理摘要、翻译、笔记时不再删除 API Key
+- 加入固定扩展身份公钥
 
-### v1.2.4
+---
+
+## v1.2.5
+
+- 修复播放器定位样式导致页面顶部出现大块空白的问题
+- AI 总结按钮固定跟随转发按钮右侧
+
+---
+
+## v1.2.4
 
 - [x] B 站视频页面 AI 总结按钮
-- [x] 修复操作栏尚未加载时页面顶部出现大块空白
-- [x] 按钮跟随在转发右侧
-- [x] Chrome / Microsoft Edge 支持
+- [x] Chrome / Microsoft Edge
 - [x] Chromium Manifest V3
 - [x] B 站字幕读取
 - [x] 阿里云百炼 Fun-ASR
 - [x] 低码率音轨优先
 - [x] HTTP 403 请求适配
 - [x] BV / 分 P / 合集状态隔离
-- [x] 防止第二个视频复用旧内容
+- [x] 视频切换内容隔离
 - [x] 简体中文章节时间线
-- [x] 时间戳跳转与字幕跟随
-- [x] 普通页面与全屏播放器笔记
-- [x] Markdown / HTML 导出
+- [x] 时间戳跳转
+- [x] 字幕播放跟随
+- [x] 普通页面笔记
+- [x] 全屏播放器笔记
+- [x] Markdown 导出
+- [x] HTML 导出
 - [x] 复制到飞书
-- [x] B 站粉色主题界面
+- [x] B 站主题界面
 - [x] 本地缓存
 
 ---
 
-## 🗺️ Roadmap
+# 🗺️ Roadmap
 
+- [x] Microsoft Edge Add-ons 正式发布
+- [ ] Chrome Web Store 发布
 - [ ] 番剧页面适配
 - [ ] 直播回放适配
 - [ ] 课堂页面适配
@@ -464,80 +835,135 @@ dist/bilibili-digest-v1.2.8.zip
 - [ ] 更细的长视频分段策略
 - [ ] 导出模板自定义
 - [ ] 飞书开放平台直接写入
-- [ ] 缓存管理和单视频重新分析
-- [ ] Chrome Web Store 发布
-- [ ] Microsoft Edge Add-ons 发布
+- [ ] 缓存管理
+- [ ] 单视频重新分析
 
-Roadmap 代表可能的后续方向，不代表已经完成或承诺上线时间。
-
----
-
-## ⚠️ 当前局限
-
-- 主要适配普通 B 站视频页，番剧、直播、课堂等页面结构可能不同。
-- 私密、付费、地区受限或需要额外权限的视频可能无法读取字幕或音轨。
-- 配置百炼 API Key 后会默认走 ASR，需要等待音频下载、上传和识别。
-- ASR、DeepSeek 的免费额度、价格和可用性由对应平台决定。
-- B 站修改网页结构或内部接口后，扩展可能需要更新。
-- 其他 Chromium 浏览器即使版本符合，也可能缺少 Side Panel API。
+> Roadmap 代表可能的后续方向，不代表已经完成或承诺上线时间。
 
 ---
 
-## 🔐 隐私
+# ⚠️ 当前局限
+
+当前版本主要针对普通 Bilibili 视频页面。
+
+以下场景可能存在兼容问题：
+
+- 番剧
+- 直播
+- 课堂
+- 私密视频
+- 付费视频
+- 地区限制视频
+- 特殊活动页面
+
+另外：
+
+- 配置百炼 API Key 后默认使用 ASR
+- ASR 需要等待视频音轨处理和云端识别
+- DeepSeek / 百炼价格及额度由对应平台决定
+- B 站修改网页结构或内部接口后可能需要更新扩展
+- 其他 Chromium 浏览器可能缺少完整 Side Panel API
+
+---
+
+# 🔐 隐私
 
 当前版本：
 
-- 没有账号系统
-- 没有自建中转服务器
-- 没有埋点统计
-- 不收集用户的视频观看记录
-- API Key 保存在浏览器本地扩展存储
-- 字幕分析时会将文本发送给配置的 AI 服务
-- ASR 时会将视频音轨发送给阿里云百炼相关服务
+- ❌ 没有账号系统
+- ❌ 没有自建 API 中转服务器
+- ❌ 没有广告
+- ❌ 没有埋点统计
+- ❌ 不收集用户视频观看记录
 
-详细说明见 `PRIVACY.md` 和 `SECURITY.md`。
+API Key：
 
-请不要提交包含真实 API Key 的 Issue、截图或代码。
+```text
+保存在浏览器扩展本地存储
+```
+
+执行 AI 分析时：
+
+```text
+字幕文本 → 用户配置的 AI 服务
+```
+
+执行 ASR 时：
+
+```text
+视频音轨 → 阿里云百炼相关服务
+```
+
+详细说明：
+
+- `PRIVACY.md`
+- `SECURITY.md`
+
+> 请勿在 GitHub Issue、截图或代码中提交真实 API Key、Cookie 或其他账号隐私信息。
 
 ---
 
-## 🤝 上游项目与二次开发说明
+# 🤝 上游项目与二次开发说明
 
 本项目基于：
 
-> [zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest)
+**[zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest)**
 
 进行二次开发。
 
-主要改造包括：
+感谢原作者公开项目以及核心产品思路。
 
-- 从 YouTube 页面适配为哔哩哔哩视频页面
-- 从 YouTube 视频识别改为 BV / 分 P / 合集识别
-- 重新实现 B 站操作栏按钮和播放器交互
-- 使用 B 站主题的中文侧边栏和设置页
-- 增加阿里云百炼 Fun-ASR 默认识别方案
-- 原生字幕接口改为 `/x/player/wbi/v2`，并校验返回的 `bvid` 与 `cid`
-- 增加视频状态隔离，避免切换视频后内容错乱
-- 增加中文章节、全屏笔记和多格式导出
-- 移除对 YouTube 和 Supadata 的运行依赖
+Bilibili Digest 针对 Bilibili 重新进行了大量平台适配，包括：
 
-感谢原作者公开项目和核心产品思路。
+- YouTube 页面 → Bilibili 视频页面
+- YouTube 视频身份 → BV / CID / 分 P / 合集识别
+- 重写 B 站操作栏按钮
+- 重写播放器交互逻辑
+- B 站主题中文 Side Panel
+- 中文设置页面
+- 阿里云百炼 Fun-ASR
+- B 站 WBI 字幕接口
+- `bvid / cid` 字幕身份校验
+- B 站音轨获取
+- HTTP 403 请求适配
+- 多视频状态隔离
+- 中文章节生成
+- 时间戳跳转
+- 全屏笔记
+- 多格式导出
+- 本地缓存
+- 移除 YouTube / Supadata 运行依赖
+
+本项目不是哔哩哔哩官方产品。
 
 ---
 
-## 📄 License
+# 📄 License
 
-本项目使用 [MIT License](LICENSE)。
+本项目使用：
 
-你可以自由使用、修改、Fork、二次开发、部署和商业使用，但需要保留 MIT License 要求的版权和许可声明，并尊重上游项目的原始许可证。
+**[MIT License](LICENSE)**
+
+你可以在 MIT License 允许范围内：
+
+- 使用
+- 修改
+- Fork
+- 二次开发
+- 部署
+- 商业使用
+
+但需要保留对应版权及许可证声明，并遵循上游项目许可证要求。
 
 ---
 
-## 💬 项目理念
+# 💡 项目理念
 
-Bilibili Digest 不想只做一个“把字幕复制出来”的工具。
+Bilibili Digest 不想只做：
 
-它更希望把长视频变成真正可以继续使用的资料：
+> “把字幕复制出来，然后让 AI 总结一下。”
+
+它更希望把长视频真正转换成可以继续使用的资料：
 
 ```text
 能读
@@ -548,14 +974,48 @@ Bilibili Digest 不想只做一个“把字幕复制出来”的工具。
 能导出
 ```
 
-配置百炼 API Key 后，以 Fun-ASR 结果作为主要文字来源；没有配置时，再使用经过视频身份校验的 B 站原生字幕。
+并尽可能做到：
 
-> **不自动消耗额度，不混淆不同视频，也不让中文用户拿到一套莫名其妙的英文章节。**
+> **不自动消耗额度、不混淆不同视频、不让中文用户拿到一整套莫名其妙的英文章节。**
 
 ---
 
-## ⭐ 如果这个项目对你有帮助
+# ⭐ Support
 
-欢迎 Star、Fork、提交 Issue 或 Pull Request。
+如果 Bilibili Digest 对你有帮助：
 
-遇到问题时，请提供浏览器版本、扩展版本、B 站视频链接、是否有官方字幕、错误提示及可公开的控制台日志，并先删除 API Key、Cookie 和个人账号信息。
+- ⭐ Star
+- 🍴 Fork
+- 🐛 提交 Issue
+- 🔧 提交 Pull Request
+
+都非常欢迎。
+
+反馈问题时建议提供：
+
+```text
+浏览器版本
+扩展版本
+B站视频链接
+是否存在官方字幕
+是否启用 Fun-ASR
+错误信息
+可公开的控制台日志
+```
+
+提交前请删除：
+
+```text
+API Key
+Cookie
+Token
+账号隐私信息
+```
+
+---
+
+<p align="center">
+  <strong>Bilibili Digest 📺</strong>
+  <br>
+  Turn Bilibili videos into reusable knowledge.
+</p>

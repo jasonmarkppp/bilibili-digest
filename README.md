@@ -13,8 +13,8 @@ Bilibili Digest 会直接集成到哔哩哔哩视频页面中，将视频转换�
     <strong>🛍️ Microsoft Edge Add-ons 安装</strong>
   </a>
   ·
-  <a href="https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.8">
-    <strong>📦 Latest Release v1.2.8</strong>
+  <a href="https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.9">
+    <strong>📦 Latest Release v1.2.9</strong>
   </a>
   ·
   <a href="https://b23.tv/xls42lN">
@@ -36,7 +36,7 @@ Bilibili Digest 会直接集成到哔哩哔哩视频页面中，将视频转换�
 
 It turns long-form Bilibili videos into transcripts, Chinese summaries, timestamped chapters, key insights, notes and exportable learning materials.
 
-The extension includes Bilibili-specific support for video switching, multi-part videos, collections, native subtitles, Fun-ASR transcription, timestamp navigation, fullscreen notes and per-video local caching.
+The extension includes Bilibili-specific support for video switching, multi-part videos, collections, manual/AI Bilibili subtitle tracks, optional Fun-ASR fallback, timestamp navigation, fullscreen notes and per-video local caching.
 
 It is currently publicly available through **Microsoft Edge Add-ons**.
 
@@ -74,8 +74,10 @@ Bilibili Digest 并不是简单地把一整段字幕丢给 AI。
 
 - B 站单页应用的视频切换
 - BV / 分 P / 合集分集识别
-- B 站B站已有字幕读取
-- 无字幕视频 Fun-ASR 语音识别
+- B 站人工字幕读取
+- B 站 AI 字幕识别与来源标记
+- 新版 `/x/v2/subtitle/web/view` 字幕接口 fallback
+- 完全无字幕时可选 Fun-ASR 语音识别
 - 中文 AI 概览
 - 中文章节时间线
 - 时间戳点击跳转
@@ -102,7 +104,7 @@ Bilibili Digest 已正式发布到 Microsoft Edge Add-ons。
 1. 打开或刷新 B 站视频页面。
 2. 在视频操作栏找到 **AI 总结**。
 3. 点击后打开浏览器侧边栏。
-4. 根据需要配置 DeepSeek API Key 和阿里云百炼 API Key。
+4. 配置 DeepSeek API Key；只有需要识别“完全无 B 站字幕”的视频时，再配置阿里云百炼 API Key。
 
 通过 Microsoft Edge Add-ons 安装后，可以正常接收后续商店版本更新。
 
@@ -112,7 +114,7 @@ Bilibili Digest 已正式发布到 Microsoft Edge Add-ons。
 
 也可以通过 GitHub Release 获取正式发布版本：
 
-👉 **[Bilibili Digest v1.2.8](https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.8)**
+👉 **[Bilibili Digest v1.2.9](https://github.com/jasonmarkppp/bilibili-digest/releases/tag/v1.2.9)**
 
 下载并解压后：
 
@@ -231,90 +233,135 @@ CID
 
 ---
 
-## 3. Fun-ASR + B 站B站已有字幕双通道
+## 3. B 站字幕优先 + 新版字幕接口 fallback
 
-当前版本采用两种文字来源。
+v1.2.9 起，Bilibili Digest 不再把 ASR 当作优先字幕来源。
 
-### 已配置阿里云百炼 API Key
-
-默认流程：
+统一字幕获取链路：
 
 ```text
 点击 AI 总结
       ↓
-获取当前 B 站音轨
+第一优先级：/x/player/wbi/v2
       ↓
-选择低码率音轨
+有字幕？
+├─ 是 → 使用 B 站字幕
+└─ 否
       ↓
-Fun-ASR
+第二优先级：/x/v2/subtitle/web/view
       ↓
-带时间戳文本
+有字幕？
+├─ 是 → 使用 B 站字幕
+└─ 否
+      ↓
+检查是否配置 ASR
+├─ 已配置 → Fun-ASR 转写
+└─ 未配置 → 提示“当前视频未找到可用字幕”
 ```
 
-这样可以解决：
+核心原则：
 
-- 视频本身没有字幕
-- B 站 AI 字幕质量不稳定
-- B站已有字幕偶发错配
-- 部分视频无法正常返回字幕
+> **B 站播放器已经存在的字幕永远优先于插件自己的 ASR。**
 
----
+这样可以避免在已经存在字幕时重复下载音轨、等待转写和消耗 ASR API 额度。
 
-### 未配置百炼 API Key
+### 第一字幕接口：`/x/player/wbi/v2`
 
-扩展会尝试请求：
+扩展首先请求：
 
 ```text
 https://api.bilibili.com/x/player/wbi/v2
 ```
 
-读取 B 站当前视频B站已有字幕。
-
-同时会校验接口返回的：
+并校验当前视频的：
 
 ```text
 bvid
 cid
 ```
 
-是否和当前视频一致。
+避免多 P 或视频切换后字幕错配。
 
-只有身份匹配的字幕才会继续使用，从而减少：
+### 第二字幕接口：`/x/v2/subtitle/web/view`
 
-> 第二个视频误用了第一个视频字幕
+如果旧接口没有返回字幕轨道，扩展继续请求：
 
-的问题。
+```text
+https://api.bilibili.com/x/v2/subtitle/web/view
+```
+
+该接口用于读取 **B 站播放器已经存在的字幕轨道**，不是插件 ASR。
+
+当前网页端响应可能为 Protobuf。v1.2.9 已加入轻量 Protobuf decoder，并同时兼容 JSON 响应，用于提取：
+
+```text
+lan
+lan_doc
+subtitle_url
+type
+ai_type
+ai_status
+```
+
+获取真正字幕文件 URL 后，再转换为插件统一的时间戳字幕结构。
+
+部分 B 站 AI 字幕依赖登录态；扩展会使用当前浏览器的 B 站会话请求接口，但不会读取、保存或打印 Cookie / SESSDATA。
 
 ---
 
-## 4. 按需调用 ASR
+## 4. 字幕来源分类与 ASR fallback
 
-Bilibili Digest 不会在打开每一个视频时立即执行语音识别。
+插件内部只使用 3 种字幕来源：
 
-只有用户主动点击：
+| 内部类型 | UI 显示 | 含义 |
+| --- | --- | --- |
+| `manual` | 人工字幕 | UP 主上传、人工制作或 B 站已有非 AI 字幕轨道 |
+| `bilibili-ai` | B站 AI 字幕 | B 站自动语音识别生成的 AI 字幕轨道 |
+| `asr` | ASR 转写 | 插件调用阿里云 Fun-ASR 等第三方 ASR 得到的文字 |
+
+B 站 AI 字幕会结合字幕轨道的 `type`、`lan`、`ai_type` 等字段判断，例如 `ai-zh`。
+
+如果同一视频同时存在多条轨道，优先级为：
 
 ```text
-AI 总结
+中文人工字幕
+↓
+中文 B站 AI 字幕
+↓
+其他人工字幕
+↓
+其他 B站 AI 字幕
 ```
 
-之后才会开始：
+只有两个 B 站字幕接口都明确没有可用字幕时，才会进入 ASR fallback。
 
 ```text
-音轨下载
-↓
-上传
-↓
-ASR
-↓
-AI 总结
+B 站字幕接口都为空
+      ↓
+已配置百炼 API Key？
+├─ 是 → 下载低码率音轨 → Fun-ASR → ASR 转写
+└─ 否 → 当前视频未找到可用字幕，如需识别无字幕视频，请先配置 ASR
 ```
 
-这样可以减少：
+请求失败、登录态异常、权限问题和“确实没有字幕”会分别处理，不会把 401 / 403 / 登录问题伪装成“视频没有字幕”，也不会因此误触发 ASR。
 
-- 无意义的网络流量
-- 页面加载后的后台任务
-- API 免费额度消耗
-- 用户只是普通看视频时产生的等待
+AI 翻译、润色、总结都属于后处理，不会改变字幕来源。例如：
+
+```text
+B站 AI 字幕
+      ↓
+AI 翻译 / 重写 / 总结
+      ↓
+来源仍然是：B站 AI 字幕
+```
+
+字幕区域会以轻量标签显示当前来源：
+
+```text
+字幕来源：人工字幕
+字幕来源：B站 AI 字幕
+字幕来源：ASR 转写
+```
 
 ---
 
@@ -428,7 +475,7 @@ chrome.storage.local
 | 服务 | 是否必需 | 用途 |
 | --- | --- | --- |
 | DeepSeek API Key | 必需 | AI 概览、章节、观点及内容整理 |
-| 阿里云百炼 API Key | 推荐 | Fun-ASR 视频语音识别 |
+| 阿里云百炼 API Key | 可选 | 仅当 B 站两个字幕接口都没有可用字幕时，用于 Fun-ASR 语音识别 |
 
 打开 Bilibili Digest 的：
 
@@ -503,36 +550,44 @@ chrome.storage.local
 ```text
 打开 B 站视频
       ↓
-识别当前 BV / CID / 分 P / 合集
+识别当前 BV / AID / CID / 分 P / 合集
       ↓
 用户点击 AI 总结
       ↓
-判断是否配置百炼 API Key
+请求 /x/player/wbi/v2
       ↓
-┌──────────────────────┬───────────────────────┐
-│ 已配置百炼            │ 未配置百炼             │
-│                      │                       │
-│ 获取低码率音轨        │ 请求 /x/player/wbi/v2 │
-│ ↓                    │ ↓                     │
-│ Fun-ASR              │ 校验 bvid / cid       │
-│ ↓                    │ ↓                     │
-│ 带时间戳文本          │ B站B站已有字幕            │
-└──────────┬───────────┴───────────┬───────────┘
-           ↓
-        文本统一处理
-           ↓
-        DeepSeek
-           ↓
-  概览 / 中文章节 / 观点
-           ↓
-   时间戳 / 笔记 / 导出
-           ↓
-      按视频本地保存
+有可用字幕？
+├─ 是 → 分类为「人工字幕」或「B站 AI 字幕」
+└─ 否
+      ↓
+请求 /x/v2/subtitle/web/view
+      ↓
+解析 JSON / Protobuf 字幕轨道
+      ↓
+有可用字幕？
+├─ 是 → 分类为「人工字幕」或「B站 AI 字幕」
+└─ 否
+      ↓
+是否配置 ASR？
+├─ 是 → 低码率音轨 → Fun-ASR →「ASR 转写」
+└─ 否 → 提示未找到可用字幕
+      ↓
+统一字幕结构
+      ↓
+DeepSeek
+      ↓
+概览 / 中文章节 / 观点
+      ↓
+时间戳 / 笔记 / 导出
+      ↓
+按视频本地保存
 ```
 
 当前核心设计：
 
-> **配置 ASR 后默认使用 ASR；未配置时使用经过视频身份校验的 B 站B站已有字幕；所有结果按照视频身份隔离。**
+> **`/x/player/wbi/v2 → /x/v2/subtitle/web/view → ASR`。B 站已有字幕永远优先，ASR 只负责真正无字幕的视频。**
+
+无论字幕来自旧接口、新接口还是 ASR，后续总结、问答、时间戳、笔记和导出都只消费同一份统一字幕结构，不需要感知具体 Provider。
 
 ---
 
@@ -548,7 +603,7 @@ Bilibili
 国内用户
 ```
 
-因此项目重新设计了文字识别链路。
+因此项目保留 Fun-ASR 作为 **真正无 B 站字幕时的最后 fallback**，而不是默认字幕来源。
 
 Fun-ASR 的优势包括：
 
@@ -591,7 +646,7 @@ Fun-ASR 的免费额度和价格由阿里云百炼决定。
 DeepSeek 生成概览
 ```
 
-因此一定比直接读取 B 站B站已有字幕慢。
+因此一定比直接读取 B 站已有字幕慢。
 
 耗时主要受到：
 
@@ -637,7 +692,7 @@ B站音轨下载失败：HTTP 403
         ↓
 3. 打开 Side Panel
         ↓
-4. 获取字幕 / Fun-ASR
+4. 优先获取 B 站字幕；确实无字幕时才使用 Fun-ASR
         ↓
 5. 查看中文 AI 概览
         ↓
@@ -739,12 +794,26 @@ npm run package
 当前版本输出：
 
 ```text
-dist/bilibili-digest-v1.2.8.zip
+dist/bilibili-digest-v1.2.9.zip
 ```
 
 ---
 
 # 🧪 Release History
+
+## v1.2.9
+
+- 字幕获取优先级改为 `/x/player/wbi/v2 → /x/v2/subtitle/web/view → ASR`
+- 增加 B 站新版 `/x/v2/subtitle/web/view` fallback
+- 支持新版字幕接口 Protobuf 响应解析，同时兼容 JSON
+- 字幕来源统一为「人工字幕 / B站 AI 字幕 / ASR 转写」
+- B 站字幕存在时不再重复调用 ASR，减少等待和 API 成本
+- 区分“无字幕 / 登录或权限问题 / 字幕接口请求失败”
+- 修复配置 ASR 后缓存层偏向 ASR 的旧逻辑
+- 字幕来源与 AI 翻译 / 重写 / 总结状态分离
+- 增加 Provider fallback 与来源分类测试
+
+---
 
 ## v1.2.8
 
@@ -842,7 +911,9 @@ dist/bilibili-digest-v1.2.8.zip
 
 另外：
 
-- 配置百炼 API Key 后默认使用 ASR
+- 即使配置了百炼 API Key，也会优先使用 B 站已有字幕
+- 只有两个 B 站字幕接口都没有可用字幕时才会进入 ASR
+- `/x/v2/subtitle/web/view` 的部分 AI 字幕依赖 B 站登录态
 - ASR 需要等待视频音轨处理和云端识别
 - DeepSeek / 百炼价格及额度由对应平台决定
 - B 站修改网页结构或内部接口后可能需要更新扩展
@@ -906,7 +977,9 @@ Bilibili Digest 针对 Bilibili 重新进行了大量平台适配，包括：
 - B 站主题中文 Side Panel
 - 中文设置页面
 - 阿里云百炼 Fun-ASR
-- B 站 WBI 字幕接口
+- B 站 WBI 字幕接口 `/x/player/wbi/v2`
+- B 站新版字幕接口 `/x/v2/subtitle/web/view` + Protobuf 解析
+- 人工字幕 / B站 AI 字幕 / ASR 转写来源分类
 - `bvid / cid` 字幕身份校验
 - B 站音轨获取
 - HTTP 403 请求适配
@@ -981,8 +1054,8 @@ Bilibili Digest 不想只做：
 浏览器版本
 扩展版本
 B站视频链接
-是否存在官方字幕
-是否启用 Fun-ASR
+是否存在 B 站字幕轨道（人工 / AI）
+两个 B 站字幕接口都为空时是否启用 Fun-ASR
 错误信息
 可公开的控制台日志
 ```

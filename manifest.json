@@ -1,11 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Bilibili Digest",
-  "version": "1.2.8",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkRjpsaYgq+JJXQXn7TR8lIrMMyufcHZ7VW4r63mVPzvI5XS8dVhGMtdP5euDHLAjsoKwCVhdo9ImcNk6BQOm31iQjIyhPliW8uNSBje/W4R2fZoezNaJEAqmNHOWUSV6dxxSMN3Vh6AxYc/7LDZsk3SKzYCWhkwzvmgp9Qmm/tvYGGoMEXOqrvL5gwHlfRj8WC2YsRLTOekYBrA22Nol7huJik2Viwnao0Ms9p8ELbmHomgbLOdYKRTzLpsKFB1ATjDyv5dISYpoTqFWGDZOIr448F0/qyp2d9gmEwg7zrAt9hWtO2L7wLugU+GLJLMeohs/3dK3FwFAw4LeiHvKLwIDAQAB",
+  "version": "1.2.9",
   "minimum_chrome_version": "116",
   "description": "把 B 站视频变成带字幕、AI 总结、时间戳与笔记的学习资料。",
-  "permissions": ["sidePanel", "storage", "tabs", "declarativeNetRequestWithHostAccess"],
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs",
+    "declarativeNetRequestWithHostAccess"
+  ],
   "host_permissions": [
     "https://www.bilibili.com/*",
     "https://api.bilibili.com/*",
@@ -45,8 +49,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.bilibili.com/video/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://www.bilibili.com/video/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

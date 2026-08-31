@@ -682,122 +682,715 @@ async function transcribeWithBailian(videoId, cid, apiKey) {
  * @param {string} videoId - The YouTube video ID (e.g., "dQw4w9WgXcQ")
  * @returns {Object} - { success, transcript, transcriptText, language } or { success: false, error }
  */
-async function handleFetchTranscript(videoId, videoUrl = "", requestedPage = 1) {
+// === BILIBILI SUBTITLE PROVIDER V2 START ===
+/**
+ * BILIBILI SUBTITLE PROVIDER PATCH
+ *
+ * Loaded after background.js. It replaces handleFetchTranscript with a
+ * provider-first implementation:
+ *
+ *   /x/player/wbi/v2 -> /x/v2/subtitle/web/view -> optional external ASR
+ *
+ * Bilibili subtitle tracks are always preferred over external ASR.
+ */
+
+const BD_SUBTITLE_SOURCE_TYPES = Object.freeze({
+  MANUAL: "manual",
+  BILIBILI_AI: "bilibili-ai",
+  ASR: "asr",
+});
+
+const BD_SUBTITLE_SOURCE_LABELS = Object.freeze({
+  [BD_SUBTITLE_SOURCE_TYPES.MANUAL]: "人工字幕",
+  [BD_SUBTITLE_SOURCE_TYPES.BILIBILI_AI]: "B站 AI 字幕",
+  [BD_SUBTITLE_SOURCE_TYPES.ASR]: "ASR 转写",
+});
+
+function bdSubtitleLog(...args) {
+  if (typeof debugLog === "function") {
+    debugLog(...args);
+  }
+}
+
+function bdNormalizeSubtitleUrl(url) {
+  const value = String(url || "").trim();
+  if (!value) return "";
+  return value.startsWith("//") ? `https:${value}` : value;
+}
+
+function bdNumberOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function bdNormalizeTrack(track = {}) {
+  return {
+    ...track,
+    id: track.id ?? null,
+    id_str: track.id_str ?? track.idStr ?? null,
+    lan: String(track.lan ?? track.language ?? "").trim(),
+    lan_doc: String(track.lan_doc ?? track.lanDoc ?? track.language_name ?? "").trim(),
+    lan_doc_brief: String(track.lan_doc_brief ?? track.lanDocBrief ?? "").trim(),
+    subtitle_url: bdNormalizeSubtitleUrl(
+      track.subtitle_url ?? track.subtitleUrl ?? track.url ?? "",
+    ),
+    type: bdNumberOrNull(track.type),
+    ai_type: bdNumberOrNull(track.ai_type ?? track.aiType),
+    ai_status: bdNumberOrNull(track.ai_status ?? track.aiStatus),
+  };
+}
+
+function bdClassifyBilibiliTrack(track = {}) {
+  const normalized = bdNormalizeTrack(track);
+  const lan = normalized.lan.toLowerCase();
+  const docs = `${normalized.lan_doc} ${normalized.lan_doc_brief}`;
+  const isAi =
+    normalized.type === 1 ||
+    /^ai[-_]/i.test(lan) ||
+    normalized.ai_type > 0 ||
+    /(^|[\s（(])AI([\s）)]|$)/i.test(docs);
+
+  const sourceType = isAi
+    ? BD_SUBTITLE_SOURCE_TYPES.BILIBILI_AI
+    : BD_SUBTITLE_SOURCE_TYPES.MANUAL;
+
+  return {
+    sourceType,
+    sourceLabel: BD_SUBTITLE_SOURCE_LABELS[sourceType],
+  };
+}
+
+function bdTrackScore(track = {}) {
+  const normalized = bdNormalizeTrack(track);
+  const { sourceType } = bdClassifyBilibiliTrack(normalized);
+  const lan = normalized.lan.toLowerCase();
+  const doc = normalized.lan_doc.toLowerCase();
+  const chinese =
+    /(^|[-_])(zh|cn)([-_]|$)/i.test(lan) ||
+    lan === "ai-zh" ||
+    /中文|汉语/.test(doc);
+
+  let score = 0;
+  if (chinese) score += 1000;
+  if (sourceType === BD_SUBTITLE_SOURCE_TYPES.MANUAL) score += 200;
+  if (lan === "zh-cn" || lan === "zh-hans" || lan === "zh") score += 40;
+  if (lan === "ai-zh") score += 30;
+  if (normalized.subtitle_url) score += 10;
+  return score;
+}
+
+function bdSortTracks(tracks) {
+  return [...(tracks || [])]
+    .map(bdNormalizeTrack)
+    .filter((track) => track.lan || track.subtitle_url)
+    .sort((a, b) => bdTrackScore(b) - bdTrackScore(a));
+}
+
+function bdReadVarint(bytes, startOffset) {
+  let value = 0n;
+  let shift = 0n;
+  let offset = startOffset;
+
+  while (offset < bytes.length) {
+    const byte = BigInt(bytes[offset]);
+    offset += 1;
+    value |= (byte & 0x7fn) << shift;
+    if ((byte & 0x80n) === 0n) {
+      const numberValue =
+        value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : value.toString();
+      return { value: numberValue, offset };
+    }
+    shift += 7n;
+    if (shift > 70n) throw new Error("protobuf varint is too long");
+  }
+
+  throw new Error("unterminated protobuf varint");
+}
+
+function bdDecodeProtoMessage(input) {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  const fields = [];
+  let offset = 0;
+
+  while (offset < bytes.length) {
+    const keyResult = bdReadVarint(bytes, offset);
+    const key = Number(keyResult.value);
+    offset = keyResult.offset;
+
+    const number = key >> 3;
+    const wireType = key & 0x07;
+    if (!number) throw new Error("invalid protobuf field number");
+
+    if (wireType === 0) {
+      const result = bdReadVarint(bytes, offset);
+      offset = result.offset;
+      fields.push({ number, wireType, value: result.value });
+      continue;
+    }
+
+    if (wireType === 1 || wireType === 5) {
+      const length = wireType === 1 ? 8 : 4;
+      const end = offset + length;
+      if (end > bytes.length) throw new Error("truncated protobuf fixed field");
+      fields.push({ number, wireType, data: bytes.slice(offset, end) });
+      offset = end;
+      continue;
+    }
+
+    if (wireType === 2) {
+      const lengthResult = bdReadVarint(bytes, offset);
+      const length = Number(lengthResult.value);
+      offset = lengthResult.offset;
+      const end = offset + length;
+      if (!Number.isSafeInteger(length) || length < 0 || end > bytes.length) {
+        throw new Error("truncated protobuf bytes field");
+      }
+      fields.push({ number, wireType, data: bytes.slice(offset, end) });
+      offset = end;
+      continue;
+    }
+
+    throw new Error(`unsupported protobuf wire type: ${wireType}`);
+  }
+
+  return fields;
+}
+
+function bdProtoBytes(fields, number) {
+  return fields.find(
+    (field) => field.number === number && field.wireType === 2,
+  )?.data;
+}
+
+function bdProtoVarint(fields, number) {
+  return fields.find(
+    (field) => field.number === number && field.wireType === 0,
+  )?.value ?? null;
+}
+
+function bdProtoText(fields, number) {
+  const bytes = bdProtoBytes(fields, number);
+  if (!bytes) return "";
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
+function bdParseWebSubtitleProtobuf(input) {
+  const topFields = bdDecodeProtoMessage(input);
+  const dataPayload = bdProtoBytes(topFields, 1);
+  if (!dataPayload) return [];
+
+  const tracks = [];
+  for (const field of bdDecodeProtoMessage(dataPayload)) {
+    if (field.number !== 3 || field.wireType !== 2 || !field.data) continue;
+
+    const itemFields = bdDecodeProtoMessage(field.data);
+    const lan = bdProtoText(itemFields, 3);
+    const subtitleUrl = bdProtoText(itemFields, 5);
+    if (!lan || !subtitleUrl) continue;
+
+    tracks.push(
+      bdNormalizeTrack({
+        id: bdProtoVarint(itemFields, 1),
+        id_str: bdProtoText(itemFields, 2),
+        lan,
+        lan_doc: bdProtoText(itemFields, 4),
+        subtitle_url: subtitleUrl,
+        type: bdProtoVarint(itemFields, 7),
+        lan_doc_brief: bdProtoText(itemFields, 8),
+        ai_type: bdProtoVarint(itemFields, 9),
+        ai_status: bdProtoVarint(itemFields, 10),
+      }),
+    );
+  }
+
+  return tracks;
+}
+
+function bdCollectJsonSubtitleTracks(value, tracks = [], depth = 0) {
+  if (depth > 8 || value === null || value === undefined) return tracks;
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => bdCollectJsonSubtitleTracks(item, tracks, depth + 1));
+    return tracks;
+  }
+
+  if (typeof value !== "object") return tracks;
+
+  const looksLikeTrack =
+    (typeof value.lan === "string" || typeof value.language === "string") &&
+    (value.subtitle_url || value.subtitleUrl || value.url);
+  if (looksLikeTrack) {
+    tracks.push(bdNormalizeTrack(value));
+    return tracks;
+  }
+
+  Object.values(value).forEach((item) =>
+    bdCollectJsonSubtitleTracks(item, tracks, depth + 1),
+  );
+  return tracks;
+}
+
+function bdLooksLikeJson(bytes, contentType) {
+  if (/json/i.test(contentType || "")) return true;
+  for (const byte of bytes) {
+    // whitespace
+    if (byte === 9 || byte === 10 || byte === 13 || byte === 32) continue;
+    return byte === 123 || byte === 91; // { or [
+  }
+  return false;
+}
+
+function bdParseWebSubtitlePayload(buffer, contentType = "") {
+  const bytes = new Uint8Array(buffer);
+  if (!bytes.length) return [];
+
+  if (bdLooksLikeJson(bytes, contentType)) {
+    const text = new TextDecoder().decode(bytes);
+    const payload = JSON.parse(text);
+    if (payload?.code && payload.code !== 0) {
+      const error = new Error(payload.message || `B站字幕接口返回 ${payload.code}`);
+      error.bilibiliCode = payload.code;
+      throw error;
+    }
+    return bdCollectJsonSubtitleTracks(payload);
+  }
+
+  return bdParseWebSubtitleProtobuf(bytes);
+}
+
+function bdLogTracks(provider, tracks) {
+  const safeTracks = (tracks || []).map((track) => {
+    const normalized = bdNormalizeTrack(track);
+    return {
+      lan: normalized.lan,
+      type: normalized.type,
+      ai_type: normalized.ai_type,
+      sourceType: bdClassifyBilibiliTrack(normalized).sourceType,
+    };
+  });
+  bdSubtitleLog(
+    `[Subtitle] ${provider}: found ${safeTracks.length} subtitle track(s)`,
+    safeTracks,
+  );
+}
+
+function bdAuthLikeStatus(httpStatus, bilibiliCode) {
+  return (
+    httpStatus === 401 ||
+    httpStatus === 403 ||
+    [-101, -111, -10403].includes(Number(bilibiliCode))
+  );
+}
+
+async function bdTryLegacyBilibiliSubtitle(info) {
+  const provider = "bilibili-player-wbi";
+  bdSubtitleLog(
+    `[Subtitle] Trying player/wbi/v2... bvid=${info.bvid} aid=${info.aid} cid=${info.cid}`,
+  );
+
+  let response;
+  try {
+    response = await fetch(
+      `https://api.bilibili.com/x/player/wbi/v2?bvid=${encodeURIComponent(info.bvid)}&cid=${encodeURIComponent(info.cid)}`,
+      { credentials: "include", cache: "no-store" },
+    );
+  } catch (error) {
+    bdSubtitleLog("[Subtitle] player/wbi/v2 request failed:", error.message);
+    return { status: "error", provider, error };
+  }
+
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    return { status: "error", provider, error: new Error("B站旧字幕接口返回了无法解析的响应。") };
+  }
+
+  if (!response.ok || payload?.code !== 0) {
+    const error = new Error(
+      payload?.message || `B站旧字幕接口请求失败（HTTP ${response.status}）。`,
+    );
+    error.status = response.status;
+    error.bilibiliCode = payload?.code;
+    const status = bdAuthLikeStatus(response.status, payload?.code)
+      ? "auth"
+      : "error";
+    bdSubtitleLog(`[Subtitle] player/wbi/v2 ${status}:`, error.message);
+    return { status, provider, error };
+  }
+
+  if (
+    (payload.data?.bvid &&
+      String(payload.data.bvid) !== String(info.bvid)) ||
+    (payload.data?.cid &&
+      Number(payload.data.cid) !== Number(info.cid))
+  ) {
+    const error = new Error(
+      "B站旧字幕接口返回的字幕信息与当前视频不匹配，请刷新后重试。",
+    );
+    return { status: "error", provider, error };
+  }
+
+  const tracks = (payload.data?.subtitle?.subtitles || []).map(bdNormalizeTrack);
+  bdLogTracks("player/wbi/v2", tracks);
+  if (!tracks.length) {
+    if (payload.data?.subtitle?.need_login_subtitle) {
+      const error = new Error(
+        "B站播放器提示当前字幕需要登录后才能读取。",
+      );
+      bdSubtitleLog("[Subtitle] player/wbi/v2 requires login for subtitles");
+      return { status: "auth", provider, error };
+    }
+    bdSubtitleLog("[Subtitle] No subtitle found from player/wbi/v2");
+    return { status: "empty", provider, tracks: [] };
+  }
+
+  return { status: "ok", provider, tracks };
+}
+
+async function bdTryWebBilibiliSubtitle(info) {
+  const provider = "bilibili-web-subtitle";
+  bdSubtitleLog(
+    `[Subtitle] Trying subtitle/web/view... bvid=${info.bvid} aid=${info.aid} cid=${info.cid}`,
+  );
+
+  if (!info.aid) {
+    const error = new Error("B站视频信息缺少 aid，无法请求新版字幕接口。");
+    return { status: "error", provider, error };
+  }
+
+  const query = new URLSearchParams({
+    oid: String(info.cid),
+    pid: String(info.aid),
+    context_ext: JSON.stringify({ video_type: 1 }),
+    type: "1",
+    cur_production_type: "0",
+    preferred_language: "ai-zh",
+    playlist_switch: "0",
+  });
+
+  let response;
+  try {
+    response = await fetch(
+      `https://api.bilibili.com/x/v2/subtitle/web/view?${query.toString()}`,
+      {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/octet-stream" },
+      },
+    );
+  } catch (error) {
+    bdSubtitleLog("[Subtitle] subtitle/web/view request failed:", error.message);
+    return { status: "error", provider, error };
+  }
+
+  if (!response.ok) {
+    const error = new Error(
+      `B站新版字幕接口请求失败（HTTP ${response.status}）。`,
+    );
+    error.status = response.status;
+    const status = bdAuthLikeStatus(response.status, null) ? "auth" : "error";
+    bdSubtitleLog(`[Subtitle] subtitle/web/view ${status}:`, error.message);
+    return { status, provider, error };
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  let tracks;
+  try {
+    const buffer = await response.arrayBuffer();
+    tracks = bdParseWebSubtitlePayload(buffer, contentType);
+  } catch (error) {
+    const status = bdAuthLikeStatus(response.status, error.bilibiliCode)
+      ? "auth"
+      : "error";
+    bdSubtitleLog(
+      `[Subtitle] subtitle/web/view parse ${status}: content-type=${contentType || "(missing)"}`,
+      error.message,
+    );
+    return { status, provider, error };
+  }
+
+  bdSubtitleLog(
+    `[Subtitle] subtitle/web/view response content-type=${contentType || "(missing)"}`,
+  );
+  bdLogTracks("subtitle/web/view", tracks);
+
+  if (!tracks.length) {
+    bdSubtitleLog("[Subtitle] No subtitle found from subtitle/web/view");
+    return { status: "empty", provider, tracks: [] };
+  }
+
+  return { status: "ok", provider, tracks };
+}
+
+function bdNormalizeSubtitleDocument(payload, track, provider) {
+  const body =
+    payload?.body ||
+    payload?.data?.body ||
+    payload?.subtitle?.body ||
+    [];
+  if (!Array.isArray(body) || !body.length) {
+    throw new Error("B站字幕文件为空。");
+  }
+
+  const transcript = [];
+  let plain = "";
+  let timestamped = "";
+
+  for (const chunk of body) {
+    const cleanText = String(
+      chunk?.content ?? chunk?.text ?? "",
+    ).trim();
+    if (!cleanText) continue;
+
+    const startSeconds = Math.max(
+      0,
+      Number(chunk?.from ?? chunk?.start ?? 0) || 0,
+    );
+    const endSeconds = Math.max(
+      startSeconds,
+      Number(chunk?.to ?? chunk?.end ?? startSeconds) || startSeconds,
+    );
+    const minutes = Math.floor(startSeconds / 60);
+    const seconds = Math.floor(startSeconds % 60);
+    const timestamp = `${minutes}:${String(seconds).padStart(2, "0")}`;
+
+    transcript.push({
+      text: cleanText,
+      start: startSeconds,
+      duration: Math.max(0, endSeconds - startSeconds),
+      language: track.lan || null,
+    });
+    plain += `${cleanText} `;
+    timestamped += `[${timestamp}] ${cleanText}\n`;
+  }
+
+  if (!transcript.length) throw new Error("B站字幕文件没有可用文本。");
+
+  const { sourceType, sourceLabel } = bdClassifyBilibiliTrack(track);
+  return {
+    success: true,
+    transcript,
+    segments: transcript,
+    transcriptText: plain.trim(),
+    transcriptTextTimestamped: timestamped.trim(),
+    rawText: plain.trim(),
+    language: track.lan || null,
+    source: sourceType,
+    sourceType,
+    sourceLabel,
+    provider,
+    rewritten: false,
+  };
+}
+
+async function bdResolveTracks(providerResult, info) {
+  if (providerResult.status !== "ok") return providerResult;
+
+  const tracks = bdSortTracks(providerResult.tracks);
+  let lastError = null;
+
+  for (const track of tracks) {
+    if (!track.subtitle_url) continue;
+    const classification = bdClassifyBilibiliTrack(track);
+    bdSubtitleLog(
+      `[Subtitle] Trying ${providerResult.provider} track lan=${track.lan || "(unknown)"} source=${classification.sourceType}`,
+    );
+
+    try {
+      const subtitleResponse = await fetch(track.subtitle_url, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!subtitleResponse.ok) {
+        throw new Error(
+          `B站字幕文件下载失败（HTTP ${subtitleResponse.status}）。`,
+        );
+      }
+      const payload = await subtitleResponse.json();
+      const result = bdNormalizeSubtitleDocument(
+        payload,
+        track,
+        providerResult.provider,
+      );
+      bdSubtitleLog(
+        `[Subtitle] Found ${result.sourceLabel} via ${providerResult.provider} lan=${result.language || "(unknown)"}`,
+      );
+      return { status: "success", result };
+    } catch (error) {
+      lastError = error;
+      bdSubtitleLog(
+        `[Subtitle] Track download/parse failed via ${providerResult.provider}:`,
+        error.message,
+      );
+    }
+  }
+
+  const error =
+    lastError ||
+    new Error(`${providerResult.provider} 返回了字幕轨道，但没有可用字幕文件地址。`);
+  return { status: "error", provider: providerResult.provider, error };
+}
+
+function bdWithAsrMetadata(result) {
+  if (!result?.success) return result;
+  const transcript = result.transcript || [];
+  return {
+    ...result,
+    transcript,
+    segments: transcript,
+    rawText: result.transcriptText || "",
+    source: BD_SUBTITLE_SOURCE_TYPES.ASR,
+    sourceType: BD_SUBTITLE_SOURCE_TYPES.ASR,
+    sourceLabel: BD_SUBTITLE_SOURCE_LABELS[BD_SUBTITLE_SOURCE_TYPES.ASR],
+    provider: "aliyun-fun-asr",
+    rewritten: false,
+  };
+}
+
+function bdProviderFailureMessage(attempts) {
+  const auth = attempts.find((attempt) => attempt?.status === "auth");
+  if (auth) {
+    return {
+      error: "SUBTITLE_AUTH_REQUIRED",
+      message:
+        "B站字幕接口需要有效登录态或当前账号无权限读取字幕。请确认已登录 B站、刷新视频页面后重试。",
+    };
+  }
+
+  const failed = attempts.find((attempt) => attempt?.status === "error");
+  if (failed) {
+    return {
+      error: "SUBTITLE_API_ERROR",
+      message: `B站字幕接口请求失败：${failed.error?.message || "未知错误"} 请稍后重试。`,
+    };
+  }
+
+  return null;
+}
+
+async function handleFetchTranscript(
+  videoId,
+  videoUrl = "",
+  requestedPage = 1,
+) {
   try {
     YTD_SETTINGS.canonicalBilibiliUrl(videoId);
+
     const viewResponse = await fetch(
       `https://api.bilibili.com/x/web-interface/view?bvid=${encodeURIComponent(videoId)}`,
-      { credentials: "include" },
+      { credentials: "include", cache: "no-store" },
     );
     const view = await viewResponse.json();
     if (!viewResponse.ok || view.code !== 0 || !view.data) {
-      throw new Error(view.message || "无法读取 B 站视频信息。");
+      const error = new Error(view.message || "无法读取 B 站视频信息。");
+      error.status = viewResponse.status;
+      error.bilibiliCode = view.code;
+      throw error;
     }
 
     let part = Math.max(1, Number(requestedPage) || 1);
     try {
-      part = Math.max(part, Number(new URL(videoUrl).searchParams.get("p")) || 1);
+      part = Math.max(
+        part,
+        Number(new URL(videoUrl).searchParams.get("p")) || 1,
+      );
     } catch {}
+
     const page = view.data.pages?.[part - 1] || view.data.pages?.[0];
     if (!page?.cid) throw new Error("无法识别当前分 P 的 CID。");
 
-    // When configured, ASR is the source of truth. This avoids incorrect
-    // Bilibili ai-zh tracks and also covers videos without subtitle tracks.
-    const settings = await getSettings();
-    if (settings.asrApiKey) {
-      return await transcribeWithBailian(videoId, page.cid, settings.asrApiKey);
-    }
+    const info = {
+      bvid: view.data.bvid || videoId,
+      aid: view.data.aid,
+      cid: page.cid,
+      page: part,
+    };
 
-    const playerResponse = await fetch(
-      `https://api.bilibili.com/x/player/wbi/v2?bvid=${encodeURIComponent(videoId)}&cid=${encodeURIComponent(page.cid)}`,
-      { credentials: "include", cache: "no-store" },
+    bdSubtitleLog(
+      `[Subtitle] Resolve start bvid=${info.bvid} aid=${info.aid} cid=${info.cid} p=${info.page}`,
     );
-    const player = await playerResponse.json();
-    if (!playerResponse.ok || player.code !== 0) {
-      throw new Error(player.message || "无法读取 B 站字幕列表。");
-    }
-    if (
-      String(player.data?.bvid || "") !== String(videoId) ||
-      Number(player.data?.cid) !== Number(page.cid)
-    ) {
-      throw new Error("B 站返回的字幕信息与当前视频不匹配，请刷新后重试。");
+
+    const attempts = [];
+
+    const legacy = await bdTryLegacyBilibiliSubtitle(info);
+    attempts.push(legacy);
+    if (legacy.status === "ok") {
+      const resolvedLegacy = await bdResolveTracks(legacy, info);
+      if (resolvedLegacy.status === "success") return resolvedLegacy.result;
+      attempts.push(resolvedLegacy);
     }
 
-    const subtitles = player.data?.subtitle?.subtitles || [];
-    const preferred =
-      subtitles.find((item) => /zh|ai-zh/i.test(item.lan || "")) || subtitles[0];
-    if (!preferred?.subtitle_url) {
+    const webSubtitle = await bdTryWebBilibiliSubtitle(info);
+    attempts.push(webSubtitle);
+    if (webSubtitle.status === "ok") {
+      const resolvedWeb = await bdResolveTracks(webSubtitle, info);
+      if (resolvedWeb.status === "success") return resolvedWeb.result;
+      attempts.push(resolvedWeb);
+    }
+
+    const providerFailure = bdProviderFailureMessage(attempts);
+    if (providerFailure) {
+      bdSubtitleLog("[Subtitle] Bilibili subtitle provider failed; ASR will not be started.");
+      return { success: false, ...providerFailure };
+    }
+
+    // Only after both Bilibili providers returned a genuine "empty" result is
+    // external ASR allowed to run.
+    const legacyEmpty = legacy.status === "empty";
+    const webEmpty = webSubtitle.status === "empty";
+    if (!legacyEmpty || !webEmpty) {
       return {
         success: false,
-        error: "NO_TRANSCRIPT",
-        message: "这个视频没有可用的 B 站字幕。第一版暂不进行音频转写。",
+        error: "SUBTITLE_API_ERROR",
+        message: "B站字幕状态无法确认，请刷新页面后重试。",
       };
     }
-    const subtitleUrl = preferred.subtitle_url.startsWith("//")
-      ? `https:${preferred.subtitle_url}`
-      : preferred.subtitle_url;
-    const subtitleResponse = await fetch(subtitleUrl, { credentials: "include" });
-    if (!subtitleResponse.ok) throw new Error("B 站字幕文件下载失败。");
-    const data = await subtitleResponse.json();
 
-    // Parse the response into our internal format
-    // Supadata returns: { content: [{ text, offset, duration, lang }], lang, availableLangs }
-    const transcript = [];
-    let transcriptTextPlain = ""; // Plain text for display/export
-    let transcriptTextTimestamped = ""; // Timestamped text for AI analysis
-
-    if (data.body && Array.isArray(data.body)) {
-      for (const chunk of data.body) {
-        if (chunk.content) {
-          const cleanText = chunk.content.trim();
-          if (!cleanText) continue; // Skip if nothing left after cleanup
-
-          const startSeconds = Math.max(0, Number(chunk.from) || 0);
-          const minutes = Math.floor(startSeconds / 60);
-          const seconds = startSeconds % 60;
-          const timestamp = `${minutes}:${String(seconds).padStart(2, "0")}`;
-
-          transcript.push({
-            text: cleanText,
-            start: startSeconds,
-            duration: Math.max(0, (Number(chunk.to) || startSeconds) - startSeconds),
-            language: preferred.lan || null,
-          });
-
-          // Plain text without timestamps (for display/export)
-          transcriptTextPlain += cleanText + " ";
-
-          // Timestamped text for DeepSeek (format: [MM:SS] text)
-          // This allows the model to reference actual transcript positions.
-          transcriptTextTimestamped += `[${timestamp}] ${cleanText}\n`;
-        }
+    const settings = await getSettings();
+    if (settings.asrApiKey) {
+      bdSubtitleLog("[Subtitle] Bilibili subtitle unavailable; falling back to ASR.");
+      try {
+        return bdWithAsrMetadata(
+          await transcribeWithBailian(videoId, page.cid, settings.asrApiKey),
+        );
+      } catch (error) {
+        return {
+          success: false,
+          error: "ASR_FAILED",
+          message: error.message || "ASR 转写失败。",
+        };
       }
     }
 
-    if (transcript.length === 0) {
-      return {
-        success: false,
-        error: "EMPTY_TRANSCRIPT",
-        message: "B 站返回了空字幕。",
-      };
-    }
-
-    return {
-      success: true,
-      transcript: transcript,
-      transcriptText: transcriptTextPlain.trim(), // For display
-      transcriptTextTimestamped: transcriptTextTimestamped.trim(), // For AI
-      language: preferred.lan || null,
-      source: "bilibili-subtitle",
-    };
-  } catch (error) {
-    console.error("Transcript fetch error:", error);
+    bdSubtitleLog("[Subtitle] No Bilibili subtitle and ASR is not configured.");
     return {
       success: false,
-      error: error.message || "Failed to fetch transcript",
+      error: "NO_TRANSCRIPT",
+      message:
+        "当前视频未找到可用字幕，如需识别无字幕视频，请先配置 ASR。",
+    };
+  } catch (error) {
+    console.error("[Subtitle] Transcript fetch error:", error);
+    if (bdAuthLikeStatus(error.status, error.bilibiliCode)) {
+      return {
+        success: false,
+        error: "SUBTITLE_AUTH_REQUIRED",
+        message:
+          "B站字幕接口需要有效登录态或当前账号无权限读取字幕。请确认已登录 B站、刷新视频页面后重试。",
+      };
+    }
+    return {
+      success: false,
+      error: "SUBTITLE_API_ERROR",
+      message: error.message || "字幕获取失败。",
     };
   }
 }
+
+// === BILIBILI SUBTITLE PROVIDER V2 END ===
+
 
 /**
  * Polls for transcript job completion (for long videos).

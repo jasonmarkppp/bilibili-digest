@@ -15,7 +15,7 @@ const debugLog = (...args) => {
 // ============================================================
 
 let currentVideoId = null;
-const DIGEST_CACHE_SCHEMA_VERSION = 4;
+const DIGEST_CACHE_SCHEMA_VERSION = 5;
 let digestGeneration = 0;
 let currentVideoUrl = null;
 let currentAnalysis = null;
@@ -23,7 +23,11 @@ let currentTranscript = null;
 let currentTranscriptText = null; // Plain text (for display/export)
 let currentTranscriptTimestamped = null; // With timestamps for AI analysis
 let currentTranscriptLanguage = null;
-let currentTranscriptSource = null;
+let currentTranscriptSource = null; // Legacy compatibility alias for sourceType
+let currentTranscriptSourceType = null;
+let currentTranscriptSourceLabel = null;
+let currentTranscriptProvider = null;
+let currentTranscriptRewritten = false;
 let currentVideoTitle = "";
 let currentChannelName = "";
 let currentVideoDescription = "";
@@ -552,7 +556,12 @@ async function startDigest(videoId, videoUrl) {
     currentTranscriptText = cached.transcriptText;
     currentTranscriptTimestamped = cached.transcriptTimestamped;
     currentTranscriptLanguage = cached.transcriptLanguage || null;
-    currentTranscriptSource = cached.transcriptSource || null;
+    currentTranscriptSourceType =
+      cached.transcriptSourceType || cached.transcriptSource || null;
+    currentTranscriptSource = currentTranscriptSourceType;
+    currentTranscriptSourceLabel = cached.transcriptSourceLabel || null;
+    currentTranscriptProvider = cached.transcriptProvider || null;
+    currentTranscriptRewritten = Boolean(cached.transcriptRewritten);
     updateTranscriptLanguageModes();
     isAnalysisLoading = false;
 
@@ -599,6 +608,10 @@ async function startDigest(videoId, videoUrl) {
   currentTranscriptTimestamped = null;
   currentTranscriptLanguage = null;
   currentTranscriptSource = null;
+  currentTranscriptSourceType = null;
+  currentTranscriptSourceLabel = null;
+  currentTranscriptProvider = null;
+  currentTranscriptRewritten = false;
   isAnalysisLoading = false;
 
   if (currentVideoTitle || currentChannelName) {
@@ -624,12 +637,19 @@ async function startDigest(videoId, videoUrl) {
 
   if (!transcriptResult.success) {
     const detail = transcriptResult.message || transcriptResult.error;
-    showError(
-      String(detail).includes("百炼") || String(detail).includes("音轨")
-        ? "语音识别失败"
-        : "没有找到可靠字幕",
-      detail,
-    );
+    const errorTitle =
+      transcriptResult.error === "SUBTITLE_AUTH_REQUIRED"
+        ? "需要登录或字幕权限不足"
+        : transcriptResult.error === "SUBTITLE_API_ERROR"
+          ? "字幕接口请求失败"
+          : transcriptResult.error === "NO_TRANSCRIPT"
+            ? "未找到可用字幕"
+            : transcriptResult.error === "ASR_FAILED" ||
+                String(detail).includes("百炼") ||
+                String(detail).includes("音轨")
+              ? "ASR 转写失败"
+              : "字幕获取失败";
+    showError(errorTitle, detail);
     errorAction = async () => {
       await chrome.storage.local.remove(`digest_${videoId}`);
       currentVideoId = null;
@@ -642,7 +662,18 @@ async function startDigest(videoId, videoUrl) {
   currentTranscriptText = transcriptResult.transcriptText;
   currentTranscriptTimestamped = transcriptResult.transcriptTextTimestamped;
   currentTranscriptLanguage = transcriptResult.language || null;
-  currentTranscriptSource = transcriptResult.source || "bilibili-subtitle";
+  currentTranscriptSourceType =
+    transcriptResult.sourceType || transcriptResult.source || "manual";
+  currentTranscriptSource = currentTranscriptSourceType;
+  currentTranscriptSourceLabel =
+    transcriptResult.sourceLabel ||
+    ({
+      manual: "人工字幕",
+      "bilibili-ai": "B站 AI 字幕",
+      asr: "ASR 转写",
+    }[currentTranscriptSourceType] || "人工字幕");
+  currentTranscriptProvider = transcriptResult.provider || null;
+  currentTranscriptRewritten = Boolean(transcriptResult.rewritten);
   updateTranscriptLanguageModes();
 
   // Render transcript immediately (no LLM needed)
@@ -836,26 +867,49 @@ function seekFromTranscriptEntryClick(event, seconds) {
   seekTo(seconds);
 }
 
+function getTranscriptSourceMeta() {
+  const sourceType =
+    currentTranscriptSourceType ||
+    currentTranscriptSource ||
+    "manual";
+  const sourceLabel =
+    currentTranscriptSourceLabel ||
+    ({
+      manual: "人工字幕",
+      "bilibili-ai": "B站 AI 字幕",
+      asr: "ASR 转写",
+    }[sourceType] || "人工字幕");
+
+  return {
+    sourceType,
+    sourceLabel,
+    provider: currentTranscriptProvider || null,
+    rewritten: Boolean(currentTranscriptRewritten),
+  };
+}
+
+function renderTranscriptSourceBadge(transcriptList) {
+  const existingBadge = document.getElementById("transcriptSourceBadge");
+  if (existingBadge) existingBadge.remove();
+
+  const { sourceType, sourceLabel, rewritten } = getTranscriptSourceMeta();
+  const badge = document.createElement("div");
+  badge.id = "transcriptSourceBadge";
+  badge.className = "transcript-source-badge";
+  badge.dataset.sourceType = sourceType;
+  badge.innerHTML =
+    `<span class="source-dot source-dot--subs"></span>` +
+    `<span>字幕来源：${escapeHtml(sourceLabel)}${rewritten ? " · 已 AI 重写" : ""}</span>`;
+  transcriptList.parentElement.insertBefore(badge, transcriptList);
+}
+
 function renderTranscript() {
   if (!currentTranscript) return;
 
   const transcriptList = document.getElementById("transcriptList");
   transcriptList.innerHTML = "";
 
-  // Show a small badge indicating the transcript came from the video's
-  // existing subtitles. (We no longer AI-transcribe audio, so subtitles
-  // are the only source.)
-  const existingBadge = document.getElementById("transcriptSourceBadge");
-  if (existingBadge) existingBadge.remove();
-
-  const badge = document.createElement("div");
-  badge.id = "transcriptSourceBadge";
-  badge.className = "transcript-source-badge";
-  const sourceLabel = currentTranscriptSource === "aliyun-fun-asr"
-    ? "阿里云 Fun-ASR 语音识别"
-    : "B站视频字幕";
-  badge.innerHTML = `<span class="source-dot source-dot--subs"></span> ${sourceLabel} · ${escapeHtml(getOriginalTranscriptLabel())}`;
-  transcriptList.parentElement.insertBefore(badge, transcriptList);
+  renderTranscriptSourceBadge(transcriptList);
 
   // Group entries using smart sentence-boundary + time-guardrail logic
   const grouped = groupTranscriptEntries(currentTranscript);
@@ -1432,7 +1486,12 @@ async function saveToCache(videoId) {
       transcriptText: currentTranscriptText,
       transcriptTimestamped: currentTranscriptTimestamped,
       transcriptLanguage: currentTranscriptLanguage,
-      transcriptSource: currentTranscriptSource,
+      transcriptSource: currentTranscriptSourceType || currentTranscriptSource,
+      transcriptSourceType:
+        currentTranscriptSourceType || currentTranscriptSource,
+      transcriptSourceLabel: currentTranscriptSourceLabel,
+      transcriptProvider: currentTranscriptProvider,
+      transcriptRewritten: Boolean(currentTranscriptRewritten),
       videoTitle: currentVideoTitle,
       channelName: currentChannelName,
       paragraphCache: paragraphCacheForVideo,
@@ -1507,15 +1566,6 @@ async function loadFromCache(videoId) {
     const cached = result[`digest_${videoId}`];
 
     if (!cached) return null;
-
-    const storedSettings = await chrome.storage.local.get(YTD_SETTINGS.STORAGE_KEY);
-    const wantsAsr = !!YTD_SETTINGS.normalize(
-      storedSettings[YTD_SETTINGS.STORAGE_KEY],
-    ).asrApiKey;
-    if (wantsAsr && cached.transcriptSource !== "aliyun-fun-asr") {
-      await chrome.storage.local.remove(`digest_${videoId}`);
-      return null;
-    }
 
     // Earlier Bilibili builds parsed "@p2" with Number("p2"), silently
     // fetching P1 and caching that transcript under another part. Never reuse
@@ -1922,18 +1972,8 @@ function renderTranscriptModeRows(segments, mode) {
   if (!transcriptList) return [];
   transcriptList.innerHTML = "";
 
-  const existingBadge = document.getElementById("transcriptSourceBadge");
-  if (existingBadge) existingBadge.remove();
-  const badge = document.createElement("div");
-  badge.id = "transcriptSourceBadge";
-  badge.className = "transcript-source-badge";
-  const originalLabel = getOriginalTranscriptLabel();
-  const modeLabel =
-    mode === "bilingual"
-      ? `${originalLabel} + 简体中文`
-      : `简体中文 · translated from ${originalLabel}`;
-  badge.innerHTML = `<span class="source-dot source-dot--subs"></span> From video subtitles · ${modeLabel}`;
-  transcriptList.parentElement.insertBefore(badge, transcriptList);
+  // Translation is post-processing only; it never changes subtitle source.
+  renderTranscriptSourceBadge(transcriptList);
 
   const rows = [];
   segments.forEach((segment, index) => {

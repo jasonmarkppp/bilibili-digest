@@ -14,7 +14,29 @@
     },
     "condition": {
       "regexFilter": "^https://[^/]+\\.(bilivideo\\.com|akamaized\\.net)/",
-      "resourceTypes": ["xmlhttprequest"]
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://www.bilibili.com/"
+        }
+      ]
+    },
+    "condition": {
+      "regexFilter": "^https://api\\.bilibili\\.com/x/v2/subtitle/web/view",
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
     }
   }
 ]
